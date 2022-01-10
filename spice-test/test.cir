@@ -1,0 +1,10 @@
+A description of the circuit
+R0 0 1 10
+C1 0 1 10
+Vcc2 0 1 10
+.control
+run
+op
+print 1
+.endc
+.end

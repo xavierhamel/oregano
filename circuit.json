@@ -1,0 +1,22 @@
+{
+    "components":[
+        {
+            "typ": "source_dc",
+            "origin": {"x": 0.0, "y": 0.0},
+            "rotation": 1,
+            "properties":[
+                {
+                    "property": "name",
+                    "is_visible": true,
+                    "value": "value"
+                }
+            ]
+        }
+    ],
+    "wires":[
+        {
+            "origin": { "x": 0.0, "y": 0.0 },
+            "end": { "x": 0.0, "y": 0.0 }
+        }
+    ]
+}
