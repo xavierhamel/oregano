@@ -79,5 +79,27 @@ impl Size {
     }
 }
 
+impl std::ops::Add for Size {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            w: self.w + other.w,
+            h: self.h + other.h,
+        }
+    }
+}
+
+impl std::ops::Sub for Size {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Self {
+            w: self.w - other.w,
+            h: self.h - other.h,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq)]
 pub struct Color(pub &'static str);

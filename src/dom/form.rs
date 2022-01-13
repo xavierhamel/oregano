@@ -211,3 +211,31 @@ pub mod select {
         Err(())
     }
 }
+
+pub mod tooltip {
+    use crate::dom;
+    
+    pub fn create(text: &str) -> web_sys::Element {
+        if text.len() > 0 {
+            dom::create_element(
+                "div",
+                dom::attributes!{
+                    "class" => "form__tooltip",
+                    "inner_html" => "?",//"<i class=\"fas fa-question\"></i>",
+                },
+                vec![
+                    dom::create_element(
+                        "div",
+                        dom::attributes!{
+                            "class" => "form__tooltip-description",
+                            "inner_html" => text,
+                        },
+                        vec![]
+                    )
+                ]
+            )
+        } else {
+            dom::create_element("div", dom::attributes!{}, vec![])
+        }
+    }
+}

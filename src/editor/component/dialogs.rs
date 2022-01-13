@@ -1,5 +1,5 @@
 use crate::{dom, editor, unit};
-use crate::editor::{entity::Entity, component::components, entity};
+use crate::editor::{entity::Entity, component::components, property};
 use crate::intrinsics::*;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -39,7 +39,7 @@ pub fn load_components_dialog(editor: Rc<RefCell<editor::Editor>>) {
                     (BUTTON_HEIGHT - new_size.h) / 2.0
                 ).unwrap();
                 context.scale(BUTTON_RATIO, BUTTON_RATIO).unwrap();
-                component.properties = std::collections::hash_map::HashMap::new();
+                component.properties = std::collections::BTreeMap::new();
                 component.draw(&context);
                 let button = dom::create_element(
                     "div",
@@ -82,9 +82,15 @@ pub fn load_components_dialog(editor: Rc<RefCell<editor::Editor>>) {
 pub fn load_properties_dialog(component: &Box<dyn Entity>) {
     let container = dom::select("#menu__property-list");
     container.set_inner_html("");
-    for (key, property) in component.properties().iter() {
+    let mut properties = component.properties().iter().map(|(&key, property)| {
+            (property, key, property::metadata_en(key))
+        })
+        .collect::<Vec<(&property::Property, &str, (&str, &str, usize))>>();
+    properties.sort_by_key(|k| k.2.2);
+
+    for (property, key, (title, desc, _)) in properties.iter() {
         let group = match property {
-            entity::Property::Text(name, is_visible) => {
+            property::Property::Text(name, is_visible) => {
                 dom::form::group(
                     vec![
                         dom::form::text_input::create(&format!("property__{}", key), &name.to_string()),
@@ -96,7 +102,7 @@ pub fn load_properties_dialog(component: &Box<dyn Entity>) {
                     ]
                 )
             },
-            entity::Property::Num(number, is_visible) => {
+            property::Property::Num(number, is_visible) => {
                 dom::form::group(
                     vec![
                         dom::form::text_input::create(&format!("property__{}", key), &number.to_string()),
@@ -108,15 +114,15 @@ pub fn load_properties_dialog(component: &Box<dyn Entity>) {
                     ]
                 )
             },
-            entity::Property::Unit(value, prefix, unit, is_visible) => {
+            property::Property::Unit(value, prefix, unit, is_visible) => {
                 let unit_string = unit.to_string();
                 let hidden_name = format!("property__{}-unit", key);
                 dom::form::group(
                     vec![
                         dom::create_element(
                             "input",
-                            dom::attributes!{ 
-                                "type" => "hidden", 
+                            dom::attributes!{
+                                "type" => "hidden",
                                 "value" => &unit_string,
                                 "name" => &hidden_name,
                             },
@@ -137,12 +143,19 @@ pub fn load_properties_dialog(component: &Box<dyn Entity>) {
                 )
             },
             // Internal properties cannot be changed by the user.
-            entity::Property::InternalStr(_) | entity::Property::InternalF64(_) => { continue; }
+            property::Property::InternalStr(_) | property::Property::InternalF64(_) => { continue; }
         };
         dom::append_children(
             &container,
             vec![
-                &dom::form::label::create(&key),
+                &dom::create_element(
+                    "div",
+                    dom::attributes!{ "class" => "form__tooltip-group" },
+                    vec![
+                        dom::form::label::create(&title),
+                        dom::form::tooltip::create(&desc),
+                    ]
+                ),
                 &group,
             ]
         );

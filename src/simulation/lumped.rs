@@ -1,4 +1,4 @@
-use crate::editor::{component, entity::Property};
+use crate::editor::{component, property::Property};
 use crate::simulation;
 
 pub fn lumped_to_string(typ: &str, component: &component::Component) -> Result<String, simulation::Err> {

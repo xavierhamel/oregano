@@ -1,13 +1,24 @@
-use std::collections::hash_map;
-use wasm_bindgen::JsValue;
+use crate::editor::{entity, entity::Entity, property, shape, styles};
 use crate::intrinsics::*;
-use crate::editor::{shape, entity, entity::Entity, styles};
-use crate::log;
+use std::collections::BTreeMap;
+use wasm_bindgen::JsValue;
 
-/// Return the color that should be a component
-pub fn color() -> Color {
-    Color("#575fcf")
-    //Color("#ef5777")
+/// Color to draw a wire by default, when it is hovered and when it's selected
+pub mod color {
+    use crate::intrinsics::Color;
+
+    pub fn default() -> Color {
+        Color("#575fcf")
+    }
+
+    pub fn hovered() -> Color {
+        Color("#ef5777")
+        //Color("#6AAB9B")
+    }
+
+    pub fn selected() -> Color {
+        Color("#ef5777")
+    }
 }
 
 /// Represent a wire in the schema. It is use to connect multiple components.
@@ -15,39 +26,35 @@ pub fn color() -> Color {
 pub struct Wire {
     origin: Point,
     size: Size,
-    color: Color,
     is_selected: bool,
+    is_hovered: bool,
     selected_offset: Point,
     pub shape: shape::Shape,
     connections: Vec<Point>,
     is_visible: bool,
     pub is_visited: bool,
-    properties: hash_map::HashMap<&'static str, entity::Property>,
+    properties: BTreeMap<&'static str, property::Property>,
 }
 
 impl Wire {
-    pub fn new(
-        start: Point,
-        end: Point,
-        color: Color,
-    ) -> Self {
+    pub fn new(start: Point, end: Point) -> Self {
         let mut wire = Self {
             origin: start,
             size: Size::new(0.0, 0.0),
-            color,
             is_selected: false,
+            is_hovered: false,
             selected_offset: Point::new(0.0, 0.0),
             shape: shape::Shape::new(vec![], vec![]),
             connections: vec![],
             is_visible: true,
             is_visited: false,
-            properties: hash_map::HashMap::new(),
+            properties: BTreeMap::new(),
         };
         wire.update_shape(start, end);
         wire.update_size();
         wire
     }
-    
+
     pub fn update_size(&mut self) {
         self.size = Size::new(self.shape.polygones[0][1].x, self.shape.polygones[0][1].y);
     }
@@ -60,7 +67,7 @@ impl Wire {
 
         self.shape = shape::Shape::new(
             vec![vec![Point::new(0.0, 0.0), end_point.snap_to_grid()]],
-            vec![]
+            vec![],
         );
         self.origin = start.snap_to_grid();
     }
@@ -70,9 +77,7 @@ impl Wire {
         context.set_stroke_style(&JsValue::from_str(style.color));
         let points = &self.shape().polygones[0]
             .iter()
-            .map(|&point| {
-                point + self.origin
-            })
+            .map(|&point| point + self.origin)
             .collect::<Vec<Point>>();
         context.begin_path();
         context.move_to(points[0].x, points[0].y);
@@ -83,19 +88,17 @@ impl Wire {
 }
 
 impl entity::Entity for Wire {
-    fn properties(&self) -> &hash_map::HashMap<&'static str, entity::Property> {
+    fn properties(&self) -> &BTreeMap<&'static str, property::Property> {
         &self.properties
     }
 
-    fn set_properties(&mut self, properties: hash_map::HashMap<&'static str, entity::Property>) {
+    fn set_properties(&mut self, properties: BTreeMap<&'static str, property::Property>) {
         self.properties = properties;
     }
 
-    fn properties_keys(&self) -> hash_map::Keys<&'static str, entity::Property> {
-        self.properties.keys()
-    }
+    fn rotate_text(&mut self) {}
 
-    fn set_connection(&mut self, idx: usize, state: bool) {}
+    fn set_connection(&mut self, _idx: usize, _state: bool) {}
 
     fn reset_connections(&mut self) {}
 
@@ -127,8 +130,16 @@ impl entity::Entity for Wire {
         self.origin = origin.snap_to_grid();
     }
 
-    fn color(&self) -> &Color {
-        &self.color
+    fn color(&self) -> Color {
+        color::default()
+    }
+
+    fn selected_color(&self) -> Color {
+        color::selected()
+    }
+
+    fn hovered_color(&self) -> Color {
+        color::hovered()
     }
 
     fn set_selected_offset(&mut self, mouse_position: Point) {
@@ -145,6 +156,14 @@ impl entity::Entity for Wire {
 
     fn set_is_selected(&mut self, is_selected: bool) {
         self.is_selected = is_selected;
+    }
+
+    fn is_hovered(&self) -> bool {
+        self.is_hovered
+    }
+
+    fn set_is_hovered(&mut self, is_hovered: bool) {
+        self.is_hovered = is_hovered
     }
 
     fn is_draggable(&self) -> bool {
@@ -172,26 +191,29 @@ impl entity::Entity for Wire {
     }
 
     fn draw(&self, context: &web_sys::CanvasRenderingContext2d) {
-        if self.is_selected {
-            self.draw_selection(context);
+        let color = if self.is_selected {
+            self.selected_color().0
+        } else if self.is_hovered {
+            self.hovered_color().0
         } else {
-            self.draw_wire(
-                context,
-                styles::StrokeStyle {
-                    line_width:1.0,
-                    color:self.color.0,
-                }
-            )
-        }
+            self.color().0
+        };
+        self.draw_wire(
+            context,
+            styles::StrokeStyle {
+                line_width: 1.0,
+                color,
+            },
+        );
     }
 
     fn draw_selection(&self, context: &web_sys::CanvasRenderingContext2d) {
         self.draw_wire(
             context,
             styles::StrokeStyle {
-                line_width:1.0,
-                color:"#ef5777",
-            }
+                line_width: 1.0,
+                color: self.selected_color().0,
+            },
         )
     }
 
@@ -218,9 +240,7 @@ impl entity::Entity for Wire {
     }
 
     /// Wires cannot be rotated (for now)
-    fn rotate(&mut self) {
-
-    }
+    fn rotate(&mut self) {}
 
     fn as_any(&self) -> &dyn std::any::Any {
         self

@@ -1,12 +1,5 @@
-use crate::editor::{
-    wire,
-    component,
-    component::components,
-    entity::Entity,
-    entity
-};
-use crate::{simulation, dom, unit};
-
+use crate::editor::{component, component::components, entity::Entity, property, wire};
+use crate::{dom, simulation};
 
 #[derive(PartialEq)]
 pub struct Connection {
@@ -20,21 +13,29 @@ pub struct Circuit {
 }
 
 impl Circuit {
-    pub fn new(wires: Vec<wire::Wire>, components: Vec<component::Component>) -> Result<Self, simulation::Err> {
-        let mut circuit = Self {
-            wires,
-            components,
-        };
+    pub fn new(
+        wires: Vec<wire::Wire>,
+        components: Vec<component::Component>,
+    ) -> Result<Self, simulation::Err> {
+        let mut circuit = Self { wires, components };
+        let mut is_ground_connected = false;
         for (idx, node) in circuit.nodes().iter().enumerate() {
             let components = circuit.components_connected_to_node(&node);
             let name = circuit.node_name(&components, idx)?;
             for conn in components.iter() {
-                circuit.components[conn.component_idx].connected_to.push(
-                    (conn.connector_idx, name.clone())
-                );
+                if circuit.components[conn.component_idx].typ == components::Components::Ground {
+                    is_ground_connected = true;
+                }
+                circuit.components[conn.component_idx]
+                    .connected_to
+                    .push((conn.connector_idx, name.clone()));
             }
         }
-        Ok(circuit)
+        if !is_ground_connected {
+            Err(simulation::Err::NoGround)
+        } else {
+            Ok(circuit)
+        }
     }
 
     fn nodes(&mut self) -> Vec<Vec<wire::Wire>> {
@@ -57,7 +58,7 @@ impl Circuit {
     fn find_wires_for_node(&self, parent: &wire::Wire) -> Vec<usize> {
         let mut new_wires_idx = self.wires_connected_to_wire(parent);
         let mut connected = new_wires_idx.clone();
-        
+
         while new_wires_idx.len() > 0 {
             let mut new_wires = Vec::new();
             for &wire_idx in new_wires_idx.iter() {
@@ -74,16 +75,27 @@ impl Circuit {
         connected
     }
 
-    fn node_name(&self, components: &Vec<Connection>, node_idx: usize) -> Result<String, simulation::Err> {
+    fn node_name(
+        &self,
+        components: &Vec<Connection>,
+        node_idx: usize,
+    ) -> Result<String, simulation::Err> {
         let mut names = Vec::new();
         for conn in components.iter() {
             let component = &self.components[conn.component_idx];
             match component.typ {
                 components::Components::Ground | components::Components::Node => {
-                    if let Some(entity::Property::Text(name, _)) = component.properties.get("name") {
+                    if let Some(property::Property::Text(name, _)) =
+                        component.properties.get("name")
+                    {
                         names.push(name.clone());
                     }
-                },
+                    if let Some(property::Property::Num(value, _)) =
+                        component.properties.get("name")
+                    {
+                        names.push(value.to_string());
+                    }
+                }
                 _ => {}
             };
         }
@@ -94,7 +106,6 @@ impl Circuit {
         } else {
             Ok(simulation::node_name(node_idx))
         }
-
     }
 
     /// Find all the connected wires to a given one. All connected wires represent a single node.
@@ -143,16 +154,16 @@ impl Circuit {
         connections
     }
 
-    fn find_ground(&self) -> Option<usize> {
+    fn _find_ground(&self) -> Option<usize> {
         for (idx, component) in self.components.iter().enumerate() {
             if component.typ == component::components::Components::Ground {
-                return Some(idx)
+                return Some(idx);
             }
         }
         None
     }
 
-    fn wires_connected_to_component(&self, component: &component::Component) -> Vec<usize> {
+    fn _wires_connected_to_component(&self, component: &component::Component) -> Vec<usize> {
         let mut connected = vec![];
         for (idx, wire) in self.wires.iter().enumerate() {
             'outer: for &contact in &wire.shape().polygones[0] {
@@ -170,52 +181,21 @@ impl Circuit {
     pub fn to_string(&self) -> Result<String, simulation::Err> {
         let mut string = String::from("A description of the circuit\n");
         for component in self.components.iter() {
-            string.push_str(&simulation::to_string(&component)?);
+            string.push_str(&simulation::component_to_string(&component)?);
             string.push_str("\n");
         }
-        // We find the selected probe, with that we will be able to insert the correct value to
-        // print.
-        let mut nodes = None;
-        if let Ok(selected_probe) = dom::form::select::value_as_string("[name=\"tran__node\"]") {
-            for component in &self.components {
-                if let Some(components::Components::Voltmeter) = component.typ() {
-                    if let Some(entity::Property::Text(name, _)) = component.properties.get("name") {
-                        if name == &selected_probe {
-                            nodes = if component.connected_to[0].0 == 0 {
-                                Some((component.connected_to[0].1.clone(), component.connected_to[1].1.clone()))
-                            } else {
-                                Some((component.connected_to[1].1.clone(), component.connected_to[0].1.clone()))
-                            };
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        if let Some((positive, negative)) = nodes {
-            string.push_str(
-                &format!(
-                    "{}\n.tran {}{} {}{} uic\n.print tran v({},{})\n.end",
-                    Circuit::spice_options(),
-                    dom::form::text_input::value_as_string("[name=\"tran__step\"]").unwrap(),
-                    unit::Prefix::as_array()[
-                        dom::form::select::value_as_usize("[name=\"tran__step-prefix\"]").unwrap()
-                    ].to_spice_sufix(),
-                    dom::form::text_input::value_as_string("[name=\"tran__stop\"]").unwrap(),
-                    unit::Prefix::as_array()[
-                        dom::form::select::value_as_usize("[name=\"tran__stop-prefix\"]").unwrap()
-                    ].to_spice_sufix(),
-                    positive,
-                    negative
-                )
-            );
+
+        let probes = simulation::probes_to_strings(&self.components)?;
+        if probes.len() > 0 {
+            let analysis = match dom::form::select::value_as_string("[name=\"sim__type\"]") {
+                Ok(typ) if typ == "tran" => simulation::tran_analysis_to_string(probes)?,
+                Ok(typ) if typ == "freq" => simulation::freq_analysis_to_string(probes)?,
+                _ => return Err(simulation::Err::InvalidAnalysis),
+            };
+            string.push_str(&analysis);
             Ok(string)
         } else {
-            Err(simulation::Err::MissingConnection(2, 0))
+            Err(simulation::Err::NoProbeSelected)
         }
-    }
-
-    fn spice_options() -> &'static str {
-        ".options NOACCT"
     }
 }

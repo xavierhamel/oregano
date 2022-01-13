@@ -1,17 +1,12 @@
-use web_sys;
-use wasm_bindgen::{JsCast, JsValue};
-use crate::editor::{
-    wire, 
-    component,
-    mouse,
-    entities,
-};
-use crate::intrinsics::*;
 use crate::dom;
+use crate::editor::{component, entities, mouse, wire};
+use crate::intrinsics::*;
+use wasm_bindgen::{JsCast, JsValue};
+use web_sys;
 
 pub struct Scene {
-    height:usize,
-    width:usize,
+    height: usize,
+    width: usize,
     offset: Point,
     scale: f64,
     context: web_sys::CanvasRenderingContext2d,
@@ -38,6 +33,7 @@ impl Scene {
 
     pub fn update_mouse(&mut self, x: f64, y: f64) {
         self.mouse.update(x, y, self.offset, self.scale);
+        self.entities.update_hovered(&self.mouse);
         self.compute_offset();
     }
 
@@ -55,10 +51,9 @@ impl Scene {
             diff.y = diff.y / self.scale;
             self.offset = self.offset + diff;
         }
-
     }
 
-    pub fn update (&mut self) {
+    pub fn update(&mut self) {
         match self.mouse.state {
             mouse::MouseState::Down => {
                 if self.entities.floating_component.is_some() {
@@ -67,12 +62,12 @@ impl Scene {
                 } else {
                     self.entities.select(&mut self.mouse);
                 }
-            },
+            }
             mouse::MouseState::Drag => {
                 if self.mouse.action == mouse::MouseAction::MoveEntity {
                     self.entities.drag(&self.mouse)
                 }
-            },
+            }
             mouse::MouseState::Click => {
                 if !self.entities.were_some_selected {
                     self.entities.add_wire(self.mouse.scene_pos);
@@ -86,38 +81,54 @@ impl Scene {
         }
     }
 
-
     pub fn draw(&self) {
-        self.context.clear_rect(0.0, 0.0, self.width as f64, self.height as f64);
+        self.context
+            .clear_rect(0.0, 0.0, self.width as f64, self.height as f64);
         self.context.set_fill_style(&JsValue::from_str("#000000"));
-        self.context.fill_rect(0.0, 0.0, self.width as f64, self.height as f64);
+        self.context
+            .fill_rect(0.0, 0.0, self.width as f64, self.height as f64);
         self.context.scale(self.scale, self.scale).unwrap();
         self.context.set_fill_style(&JsValue::from_str("#111111"));
         let grid_offset_x = self.offset.x % 10.0;
         let grid_offset_y = self.offset.y % 10.0;
         for x in (0..self.width).step_by(10) {
             for y in (0..self.height).step_by(10) {
-                self.context.fill_rect(x as f64 - grid_offset_x, y as f64 - grid_offset_y, 1.0, 1.0);
+                self.context.fill_rect(
+                    x as f64 - grid_offset_x,
+                    y as f64 - grid_offset_y,
+                    1.0,
+                    1.0,
+                );
             }
         }
 
-        self.context.translate(-self.offset.x + 0.5, -self.offset.y + 0.5).unwrap();
+        self.context
+            .translate(-self.offset.x + 0.5, -self.offset.y + 0.5)
+            .unwrap();
         self.entities.draw(&self.context);
-        self.context.translate(self.offset.x - 0.5, self.offset.y - 0.5).unwrap();
-        self.context.scale(1.0 / self.scale, 1.0 / self.scale).unwrap();
+        self.context
+            .translate(self.offset.x - 0.5, self.offset.y - 0.5)
+            .unwrap();
+        self.context
+            .scale(1.0 / self.scale, 1.0 / self.scale)
+            .unwrap();
     }
-
 
     pub fn keystroke(&mut self, key: String) {
         match key.as_str() {
             "r" => self.entities.rotate_selected(),
-            "Delete" => self.entities.delete_selected(&mut self.mouse), 
+            "Delete" => self.entities.delete_selected(&mut self.mouse),
             "Escape" => self.entities.unselect_all(),
-            _ => {},
+            _ => {}
         }
     }
 
-    fn context(canvas_id: &str) -> (web_sys::HtmlCanvasElement, web_sys::CanvasRenderingContext2d) {
+    fn context(
+        canvas_id: &str,
+    ) -> (
+        web_sys::HtmlCanvasElement,
+        web_sys::CanvasRenderingContext2d,
+    ) {
         // TODO: We need to add some error checking for this section.
         let document = web_sys::window().unwrap().document().unwrap();
         let canvas = document.get_element_by_id(canvas_id).unwrap();
@@ -132,7 +143,7 @@ impl Scene {
             .unwrap()
             .dyn_into::<web_sys::CanvasRenderingContext2d>()
             .unwrap();
-        
+
         (canvas, context)
     }
 
@@ -159,7 +170,7 @@ impl Scene {
         }
         wires
     }
-    
+
     pub fn update_size(&mut self) {
         let container = dom::select("#menu__editor-container")
             .dyn_into::<web_sys::HtmlElement>()

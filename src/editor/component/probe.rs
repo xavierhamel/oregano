@@ -1,41 +1,38 @@
-use std::collections::hash_map;
-use crate::editor::{shape::*, component, component::components, entity};
+use crate::editor::{component, component::components, property, shape::*};
 use crate::intrinsics::*;
+use std::collections::BTreeMap;
 
 pub fn voltmeter(origin: Point, name: String) -> component::Component {
-    let size = Size::new(80.0, 30.0);
-    let offset = 27.0;
-    let mut properties = hash_map::HashMap::new();
-    properties.insert("name", entity::Property::Text(name, true));
+    let size = Size::new(50.0, 33.0);
+    let offset = 12.0;
+    let mut properties = BTreeMap::new();
+    properties.insert("name", property::Property::Text(name, true));
     component::Component::new(
         components::Components::Voltmeter,
         "Voltmeter",
         origin,
         size,
-        component::color(),
-        Shape::new(vec![
+        Shape::new(
             vec![
-                Point::new(0.0, size.h),
-                Point::new(0.0, size.h / 2.0),
-                Point::new(offset, size.h / 2.0),
+                vec![
+                    Point::new(0.0, size.h),
+                    Point::new(0.0, size.h / 2.0),
+                    Point::new(offset, size.h / 2.0),
+                ],
+                vec![
+                    Point::new(size.w, size.h),
+                    Point::new(size.w, size.h / 2.0),
+                    Point::new(size.w - offset, size.h / 2.0),
+                ],
+                vec![
+                    Point::new(20.0, 8.0),
+                    Point::new(25.0, 17.0),
+                    Point::new(30.0, 8.0),
+                ],
             ],
-            vec![
-                Point::new(size.w, size.h),
-                Point::new(size.w, size.h / 2.0),
-                Point::new(size.w - offset, size.h / 2.0),
-            ],
-vec![
-            Point::new(35.0, 10.0),
-            Point::new(40.0, 20.0),
-            Point::new(45.0, 10.0),
-]
-        ], vec![
-            Arc::new(Point::new(size.w / 2.0, size.h / 2.0), 13.0, 0.0, 360.0),
-        ]),
-        vec![
-            Point::new(0.0, size.h),
-            Point::new(size.w, size.h)
-        ],
-        properties
+            vec![Arc::new(Point::new(size.w / 2.0, 13.0), 13.0, 0.0, 360.0)],
+        ),
+        vec![Point::new(0.0, size.h), Point::new(size.w, size.h)],
+        properties,
     )
 }
