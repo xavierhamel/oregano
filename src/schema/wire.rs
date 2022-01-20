@@ -1,10 +1,10 @@
+use crate::clog;
 use crate::intrinsics::*;
 use crate::schema::{ctx, layout, mouse, parts::part};
 
 pub struct Wires {
-    wires: Vec<Wire>,
+    pub wires: Vec<Wire>,
     pub selected: Vec<usize>,
-    pub floating_wire: Option<usize>,
 }
 
 impl Wires {
@@ -13,20 +13,18 @@ impl Wires {
         Self {
             wires,
             selected: Vec::new(),
-            floating_wire: None,
         }
     }
 
     pub fn add(&mut self, mouse: &mouse::Mouse) {
         self.wires.push(Wire::add(mouse.scene_pos.snap_to_grid()));
-        self.floating_wire = Some(self.wires.len() - 1);
     }
 
     pub fn update(&mut self, mouse: &mut mouse::Mouse) {
         if mouse.action == mouse::Action::DrawWire {
-            if let Some(idx) = self.floating_wire {
-                let point = *self.wires[idx].layout.shape.points.last().unwrap();
-                if mouse.state == mouse::State::Click && self.collide_with_point(point).len() > 1 {
+            if let Some(idx) = self.floating_wire() {
+                let point = self.wires[idx].layout.shape.points.last().unwrap();
+                if mouse.state == mouse::State::Click && self.collide_with_point(*point).len() > 1 {
                     self.end_wire(mouse, false);
                 } else {
                     self.wires[idx].trace(mouse);
@@ -59,14 +57,26 @@ impl Wires {
     }
 
     pub fn end_wire(&mut self, mouse: &mut mouse::Mouse, do_remove_end: bool) {
-        if let Some(idx) = self.floating_wire {
-            if do_remove_end {
-                self.wires[idx].layout.trim_shape();
+        if let Some(idx) = self.floating_wire() {
+            if self.wires[idx].layout.shape.points.len() == 2 {
+                self.wires.pop();
+            } else {
+                if do_remove_end {
+                    self.wires[idx].layout.trim_shape();
+                }
+                self.wires[idx].state = part::State::Selected;
             }
-            self.wires[idx].state = part::State::Selected;
-            self.floating_wire = None;
             mouse.action = mouse::Action::None;
         }
+    }
+
+    fn floating_wire(&self) -> Option<usize> {
+        if let Some(last) = self.wires.last() {
+            if last.state == part::State::Floating {
+                return Some(self.wires.len() - 1);
+            }
+        }
+        None
     }
 
     pub fn delete(&mut self) {
@@ -140,6 +150,12 @@ impl Wire {
             ctx.set_stroke_style_const(0.5, "#FFFFFF");
             self.layout.draw(ctx, &self.state);
             ctx.set_line_dash(vec![]);
+            self.layout.shape.points.iter().for_each(|&point| {
+                ctx.set_fill_style("#ef5777");
+                ctx.set_stroke_style_const(1.0, "#FFFFFF");
+                ctx.fill_round_rect_const(point, Size::new(7.0, 7.0), 1.3);
+                ctx.stroke_round_rect_const(point, Size::new(7.0, 7.0), 1.3);
+            })
         }
     }
 
@@ -188,11 +204,18 @@ impl Wire {
 
     pub fn collide_with_part(&self, part: &part::Part) -> Vec<usize> {
         let mut connectors = Vec::new();
-        self.layout.extremities().iter().for_each(|extremity| {
-            if let part::Colliding::Connector(idx) = part.layout.collide_with_point(*extremity) {
-                connectors.push(idx);
-            }
-        });
+        part.layout
+            .connectors
+            .iter()
+            .enumerate()
+            .for_each(|(idx, connector)| {
+                if self
+                    .layout
+                    .collide_with_point(connector.origin + part.layout.origin)
+                {
+                    connectors.push(idx);
+                }
+            });
         connectors
     }
 }

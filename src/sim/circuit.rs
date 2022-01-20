@@ -1,5 +1,5 @@
 use crate::schema::{parts, parts::part, properties, wire};
-use crate::{dom, error, sim};
+use crate::{clog, dom, error, sim};
 
 #[derive(PartialEq)]
 pub struct Connection {
@@ -22,8 +22,10 @@ impl Circuit {
     pub fn new(wires: Vec<wire::Wire>, parts: Vec<part::Part>) -> Result<Self, error::Error> {
         let mut circuit = Self { wires, parts };
         let mut is_ground_connected = false;
+        clog!("{}", circuit.nodes().len());
         circuit.nodes().iter().enumerate().for_each(|(idx, node)| {
             let parts = circuit.parts_connected_to_node(&node);
+            clog!("{}", parts.len());
             let name = circuit.node_name(&parts, idx).unwrap();
             parts.iter().for_each(|conn| {
                 if circuit.parts[conn.part].typ == parts::Typ::Ground {
@@ -145,7 +147,7 @@ impl Circuit {
             })
     }
 
-    fn to_string(&self) -> Result<String, error::Error> {
+    pub fn to_string(&self) -> Result<String, error::Error> {
         let mut string = String::from("A description of the circuit\n");
         for part in self.parts.iter() {
             string.push_str(&sim::part_to_string(&part)?);

@@ -1,5 +1,5 @@
 use crate::intrinsics::*;
-use crate::{clog, dom, error, schema, schema::parts, schema::parts::part};
+use crate::{dom, error, schema, schema::parts, schema::parts::part};
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
@@ -14,6 +14,7 @@ pub enum Event {
     KeyDown,
     Click,
     Change,
+    Resize,
 }
 
 impl fmt::Display for Event {
@@ -26,6 +27,7 @@ impl fmt::Display for Event {
             Self::KeyDown => "keydown",
             Self::Click => "click",
             Self::Change => "change",
+            Self::Resize => "resize",
         };
         write!(f, "{}", out)
     }
@@ -42,6 +44,7 @@ impl std::str::FromStr for Event {
             "keydown" => Ok(Self::KeyDown),
             "click" => Ok(Self::Click),
             "change" => Ok(Self::Change),
+            "resize" => Ok(Self::Resize),
             _ => Err(Box::new(error::Internal::Event)),
         }
     }
@@ -160,6 +163,16 @@ pub fn add_events_schema(schema: Rc<RefCell<schema::Schema>>) {
                 });
         }),
     );
+
+    let s = schema.clone();
+    EventListener::add(
+        &web_sys::window().unwrap(),
+        &Event::Resize,
+        Box::new(move |_event: web_sys::CustomEvent| {
+            s.borrow_mut().resize_dispatch();
+        }),
+    )
+
     // {
     //     let editor = editor.clone();
     //     let closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {

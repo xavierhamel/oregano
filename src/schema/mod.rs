@@ -9,7 +9,7 @@ pub mod wire;
 
 use crate::intrinsics::*;
 use crate::schema::parts::part;
-use crate::{dom, error, events, views};
+use crate::{clog, dom, error, events, sim::circuit};
 
 pub struct Schema {
     ctx: ctx::Ctx,
@@ -47,6 +47,7 @@ impl Schema {
             "r" => self.parts.rotate(),
             "Escape" => self.unselect(),
             "Delete" => self.delete(),
+            "s" => self.generate_spice(),
             _ => {}
         }
         self.update();
@@ -54,6 +55,11 @@ impl Schema {
 
     pub fn properties_dispatch(&mut self) {
         self.parts.update_selected();
+        self.update();
+    }
+
+    pub fn resize_dispatch(&mut self) {
+        let _ = self.scene.resize();
         self.update();
     }
 
@@ -100,5 +106,11 @@ impl Schema {
 
         self.ctx.translate(self.scene.offset); // - Point::new(0.5, 0.5));
         self.ctx.scale(1.0 / self.scene.scale)
+    }
+
+    pub fn generate_spice(&self) {
+        let circuit =
+            circuit::Circuit::new(self.wires.wires.clone(), self.parts.parts.clone()).unwrap();
+        clog!("{}", circuit.to_string().unwrap());
     }
 }

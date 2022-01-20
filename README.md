@@ -1,3 +1,5 @@
+Il n'est pas encore possible d'essayer le logiciel.
+
 # Oregano
 Oregano est un simulateur de circuit électrique se voulant simple et portable. L'application est simplement une interface graphique utilisant SPICE pour effectuer les différentes simulations. 
 

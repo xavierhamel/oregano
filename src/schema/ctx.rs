@@ -52,6 +52,44 @@ impl Ctx {
         self.ctx.fill_rect(origin.x, origin.y, size.w, size.h);
     }
 
+    pub fn fill_rect_const(&self, origin: Point, size: Size) {
+        let width = size.w / self.scale;
+        let height = size.h / self.scale;
+        self.ctx.fill_rect(
+            origin.x - width / 2.0,
+            origin.y - height / 2.0,
+            width,
+            height,
+        );
+    }
+
+    pub fn fill_round_rect_const(&self, origin: Point, size: Size, radius: f64) {
+        self.path_round_rect_const(origin, size, radius);
+        self.ctx.fill();
+    }
+
+    pub fn stroke_round_rect_const(&self, origin: Point, size: Size, radius: f64) {
+        self.path_round_rect_const(origin, size, radius);
+        self.ctx.stroke();
+    }
+
+    fn path_round_rect_const(&self, origin: Point, size: Size, radius: f64) {
+        let radius = radius / self.scale;
+        let s = Size::new(size.w / self.scale, size.h / self.scale);
+        let p = origin - Point::new(s.w / 2.0, s.h / 2.0);
+        self.ctx.begin_path();
+        self.ctx.move_to(p.x + radius, p.y);
+        let _ = self
+            .ctx
+            .arc_to(p.x + s.w, p.y, p.x + s.w, p.y + s.h, radius);
+        let _ = self
+            .ctx
+            .arc_to(p.x + s.w, p.y + s.h, p.x, p.y + s.h, radius);
+        let _ = self.ctx.arc_to(p.x, p.y + s.h, p.x, p.y, radius);
+        let _ = self.ctx.arc_to(p.x, p.y, p.x + s.w, p.y, radius);
+        self.ctx.close_path();
+    }
+
     pub fn stroke_shape(&self, origin: Point, shape: &shape::Shape) {
         self.ctx.begin_path();
         shape.add_path(origin, &self);

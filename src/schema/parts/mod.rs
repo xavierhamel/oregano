@@ -3,7 +3,7 @@ pub mod lumped;
 pub mod part;
 pub mod probe;
 pub mod source;
-use crate::schema::{mouse, parts, properties};
+use crate::schema::{mouse, parts};
 use crate::{error, views};
 
 pub struct Parts {
@@ -23,6 +23,9 @@ impl Parts {
     }
 
     pub fn add(&mut self, mut part: part::Part) {
+        if self.floating_part().is_some() {
+            self.parts.pop();
+        }
         part.state = part::State::Floating;
         self.parts.push(part);
     }
@@ -76,16 +79,31 @@ impl Parts {
             .parts
             .iter()
             .enumerate()
-            .filter(|(idx, _)| !self.selected.contains(idx))
+            .filter(|(idx, part)| {
+                !self.selected.contains(idx) && part.state != part::State::Floating
+            })
             .map(|(_, part)| part.clone())
             .collect::<Vec<part::Part>>();
         self.selected = Vec::new();
     }
 
     pub fn rotate(&mut self) {
-        for idx in self.selected.iter() {
-            self.parts[*idx].layout.rotate();
+        if let Some(floating) = self.floating_part() {
+            floating.layout.rotate();
+        } else {
+            for idx in self.selected.iter() {
+                self.parts[*idx].layout.rotate();
+            }
         }
+    }
+
+    fn floating_part(&mut self) -> Option<&mut part::Part> {
+        if let Some(last) = self.parts.last_mut() {
+            if last.state == part::State::Floating {
+                return Some(last);
+            }
+        }
+        None
     }
 
     pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, part::Part> {

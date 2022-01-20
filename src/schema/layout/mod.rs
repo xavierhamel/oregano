@@ -101,8 +101,7 @@ impl Connector {
     }
 
     pub fn collide_with_point(&self, offset: Point, point: Point) -> bool {
-        let d = offset + self.origin - point;
-        (d.x.powf(2.0) + d.y.powf(2.0)).sqrt() <= Connector::RADIUS
+        (offset + self.origin).distance(point) <= Connector::RADIUS
     }
 
     pub fn rotate(&mut self) {
@@ -164,7 +163,7 @@ impl PartLayout {
         Point::new(self.size.w / 2.0, self.size.h / 2.0) + self.origin
     }
 
-    pub fn mirror(&mut self) {}
+    pub fn _mirror(&mut self) {}
 
     pub fn draw(&self, ctx: &ctx::Ctx) {
         ctx.stroke_shape(self.origin, &self.shape);
@@ -181,10 +180,10 @@ impl PartLayout {
     }
 
     pub fn collide_with_point(&self, point: Point) -> part::Colliding {
-        if self.shape.collide_with_point(self.origin, point) {
-            part::Colliding::Shape
-        } else if let Some(idx) = self.connectors_collide_with_point(point) {
+        if let Some(idx) = self.connectors_collide_with_point(point) {
             part::Colliding::Connector(idx)
+        } else if self.shape.collide_with_point(self.origin, point) {
+            part::Colliding::Shape
         } else {
             part::Colliding::None
         }

@@ -1,6 +1,6 @@
 use crate::intrinsics::*;
 use crate::schema::{ctx, mouse};
-use crate::{clog, dom, error};
+use crate::{dom, error};
 
 pub struct Scene {
     pub offset: Point,
@@ -53,11 +53,11 @@ impl Scene {
             );
             ctx.begin_path();
             ctx.set_stroke_style(0.5, color);
-            for x in (0..((self.size.w / self.scale) as usize)).step_by(*step_by) {
+            for x in (0..((self.size.w / self.scale) as usize) + *step_by).step_by(*step_by) {
                 ctx.move_to(Point::new(x as f64 - offset.x, 0.0));
                 ctx.line_to(Point::new(x as f64 - offset.x, self.size.h / self.scale));
             }
-            for y in (0..((self.size.h / self.scale) as usize)).step_by(*step_by) {
+            for y in (0..((self.size.h / self.scale) as usize) + *step_by).step_by(*step_by) {
                 ctx.move_to(Point::new(0.0, y as f64 - offset.y));
                 ctx.line_to(Point::new(self.size.w / self.scale, y as f64 - offset.y));
             }

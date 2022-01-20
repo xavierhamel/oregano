@@ -102,7 +102,7 @@ impl Part {
             ctx.set_line_dash_const(vec![2.5, 1.25]);
             ctx.set_stroke_style_const(0.5, "#CCCCCC");
             self.layout.draw_bounding(ctx);
-            ctx.set_line_dash(vec![]);
+            ctx.set_line_dash_const(vec![]);
         }
         if self.state != State::None {
             self.layout.draw_connectors(&self.state, ctx);
