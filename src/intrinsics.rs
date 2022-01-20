@@ -1,3 +1,7 @@
+use std::fmt;
+
+/// Represent a coordinate in the canvas. When there's an x and a y coord, use this to represent
+/// it.
 #[derive(Clone, Copy, PartialEq)]
 pub struct Point {
     pub x: f64,
@@ -5,14 +9,13 @@ pub struct Point {
 }
 
 impl Point {
-    pub fn new(x: f64, y:f64) -> Self {
-        Self {
-            x,
-            y
-        }
+    pub const GRID_SIZE: f64 = 10.0;
+
+    pub fn new(x: f64, y: f64) -> Self {
+        Self { x, y }
     }
 
-    pub fn update(&mut self, x:f64, y: f64) {
+    pub fn update(&mut self, x: f64, y: f64) {
         self.x = x;
         self.y = y;
     }
@@ -22,14 +25,12 @@ impl Point {
     }
 
     pub fn snap_to_grid(&self) -> Self {
-        let grid_size = 5.0;
         Self {
-            x: (self.x / grid_size).round() * grid_size,
-            y: (self.y / grid_size).round() * grid_size,
+            x: (self.x / Self::GRID_SIZE).round() * Self::GRID_SIZE,
+            y: (self.y / Self::GRID_SIZE).round() * Self::GRID_SIZE,
         }
     }
 }
-
 
 impl std::ops::Add for Point {
     type Output = Self;
@@ -64,6 +65,23 @@ impl std::ops::Neg for Point {
     }
 }
 
+impl From<web_sys::MouseEvent> for Point {
+    fn from(event: web_sys::MouseEvent) -> Self {
+        Self {
+            x: event.offset_x() as f64,
+            y: event.offset_y() as f64,
+        }
+    }
+}
+
+impl fmt::Debug for Point {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "(x:{},y:{})", self.x, self.y)
+    }
+}
+
+/// Represent the size of something in the canvas. It is the same thing as the point but the
+/// difference is the name of the field of the struct.
 #[derive(Clone, Copy, PartialEq)]
 pub struct Size {
     pub w: f64,
@@ -71,11 +89,8 @@ pub struct Size {
 }
 
 impl Size {
-    pub fn new (w: f64, h:f64) -> Self {
-        Self {
-            w,
-            h
-        }
+    pub fn new(w: f64, h: f64) -> Self {
+        Self { w, h }
     }
 }
 
@@ -98,6 +113,12 @@ impl std::ops::Sub for Size {
             w: self.w - other.w,
             h: self.h - other.h,
         }
+    }
+}
+
+impl fmt::Debug for Size {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "(w:{},h:{})", self.w, self.h)
     }
 }
 

@@ -6,7 +6,7 @@ pub fn voltmeter(origin: Point, name: String) -> component::Component {
     let size = Size::new(50.0, 33.0);
     let offset = 12.0;
     let mut properties = BTreeMap::new();
-    properties.insert("name", property::Property::Text(name, true));
+    properties.insert("name".to_string(), property::Property::Text(name, true));
     component::Component::new(
         components::Components::Voltmeter,
         "Voltmeter",

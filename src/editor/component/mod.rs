@@ -50,7 +50,8 @@ pub struct Component {
     connected_connections: Vec<bool>,
     pub connected_to: Vec<(usize, String)>,
     is_visible: bool,
-    pub properties: BTreeMap<&'static str, property::Property>,
+    pub properties: BTreeMap<String, property::Property>,
+    rotation: usize,
 }
 
 impl Component {
@@ -61,7 +62,7 @@ impl Component {
         size: Size,
         shape: shape::Shape,
         connections: Vec<Point>,
-        properties: BTreeMap<&'static str, property::Property>,
+        properties: BTreeMap<String, property::Property>,
     ) -> Self {
         let connected_connections = (0..connections.len()).map(|_| false).collect::<Vec<bool>>();
         Self {
@@ -79,6 +80,7 @@ impl Component {
             is_visible: true,
             connected_to: Vec::new(),
             properties,
+            rotation: 0,
         }
     }
 }
@@ -96,11 +98,18 @@ impl entity::Entity for Component {
         self.text_position = self.text_position.rotate();
     }
 
-    fn properties(&self) -> &BTreeMap<&'static str, property::Property> {
+    fn add_rotation(&mut self) {
+        self.rotation += 1;
+        if self.rotation > 3 {
+            self.rotation = 0;
+        }
+    }
+
+    fn properties(&self) -> &BTreeMap<String, property::Property> {
         &self.properties
     }
 
-    fn set_properties(&mut self, properties: BTreeMap<&'static str, property::Property>) {
+    fn set_properties(&mut self, properties: BTreeMap<String, property::Property>) {
         self.properties = properties;
     }
 
@@ -203,6 +212,27 @@ impl entity::Entity for Component {
             }
         }
     }
+
+    fn to_oregano(&self) -> String {
+        // typ,x,y,property_name:type(value,...),...
+        // ground,100.0,200.1,name:text(gnd,0)
+        let properties = self
+            .properties
+            .iter()
+            .fold("".to_string(), |mut acc, (key, value)| {
+                acc.push_str(&format!("{}:{},", key, value.to_oregano()));
+                acc
+            });
+        format!(
+            "{},{},{},{},{}\n",
+            self.typ.to_string(),
+            self.origin.x,
+            self.origin.y,
+            self.rotation,
+            properties
+        )
+    }
+
     fn set_selected_offset(&mut self, mouse_position: Point) {
         self.selected_offset = mouse_position;
     }

@@ -1,6 +1,7 @@
 use crate::dom;
 use crate::log;
 use crate::plot;
+use crate::project;
 use crate::simulation::circuit;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -78,6 +79,10 @@ impl Editor {
         let event =
             web_sys::CustomEvent::new_with_event_init_dict("ngspice_call", &event_data).unwrap();
         web_sys::window().unwrap().dispatch_event(&event).unwrap();
+    }
+
+    pub fn export(&self) -> String {
+        project::export::to_oregano(&self.scene.entities.entities)
     }
 
     pub fn toolbar_updated(&mut self) {

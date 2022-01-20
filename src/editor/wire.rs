@@ -33,7 +33,7 @@ pub struct Wire {
     connections: Vec<Point>,
     is_visible: bool,
     pub is_visited: bool,
-    properties: BTreeMap<&'static str, property::Property>,
+    properties: BTreeMap<String, property::Property>,
 }
 
 impl Wire {
@@ -88,11 +88,11 @@ impl Wire {
 }
 
 impl entity::Entity for Wire {
-    fn properties(&self) -> &BTreeMap<&'static str, property::Property> {
+    fn properties(&self) -> &BTreeMap<String, property::Property> {
         &self.properties
     }
 
-    fn set_properties(&mut self, properties: BTreeMap<&'static str, property::Property>) {
+    fn set_properties(&mut self, properties: BTreeMap<String, property::Property>) {
         self.properties = properties;
     }
 
@@ -239,6 +239,12 @@ impl entity::Entity for Wire {
         return false;
     }
 
+    fn to_oregano(&self) -> String {
+        //x1,y1,x2,y2
+        let p1 = self.origin + self.shape.polygones[0][0];
+        let p2 = self.origin + self.shape.polygones[0][1];
+        format!("{},{},{},{}\n", p1.x, p1.y, p2.x, p2.y)
+    }
     /// Wires cannot be rotated (for now)
     fn rotate(&mut self) {}
 

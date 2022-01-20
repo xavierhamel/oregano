@@ -8,9 +8,9 @@ pub fn resistor(origin: Point, name: String) -> component::Component {
     let offset = 10.0;
     let peak_offset = 5.0;
     let mut properties = BTreeMap::new();
-    properties.insert("name", property::Property::Text(name, true));
+    properties.insert("name".to_string(), property::Property::Text(name, true));
     properties.insert(
-        "value",
+        "value".to_string(),
         property::Property::Unit(10.0, unit::Prefix::None, unit::Unit::Ohm, true),
     );
     component::Component::new(
@@ -45,13 +45,13 @@ pub fn capacitor(origin: Point, name: String) -> component::Component {
     let size = Size::new(50.0, 20.0);
     let offset = 22.0;
     let mut properties = BTreeMap::new();
-    properties.insert("name", property::Property::Text(name, true));
+    properties.insert("name".to_string(), property::Property::Text(name, true));
     properties.insert(
-        "value",
+        "value".to_string(),
         property::Property::Unit(10.0, unit::Prefix::None, unit::Unit::Farad, true),
     );
     properties.insert(
-        "initial_condition",
+        "initial_condition".to_string(),
         property::Property::Unit(0.0, unit::Prefix::None, unit::Unit::Volt, false),
     );
     component::Component::new(
@@ -81,13 +81,13 @@ pub fn inductor(origin: Point, name: String) -> component::Component {
     let offset = 10.0;
     let radius = 5.0;
     let mut properties = BTreeMap::new();
-    properties.insert("name", property::Property::Text(name, true));
+    properties.insert("name".to_string(), property::Property::Text(name, true));
     properties.insert(
-        "value",
+        "value".to_string(),
         property::Property::Unit(10.0, unit::Prefix::None, unit::Unit::Henry, true),
     );
     properties.insert(
-        "initial_condition",
+        "initial_condition".to_string(),
         property::Property::Unit(0.0, unit::Prefix::None, unit::Unit::Ampere, false),
     );
     component::Component::new(
@@ -115,7 +115,7 @@ pub fn ground(origin: Point, name: String) -> component::Component {
     let size = Size::new(20.0, 15.0);
     let offset = 5.0;
     let mut properties = BTreeMap::new();
-    properties.insert("name", property::Property::Text(name, false));
+    properties.insert("name".to_string(), property::Property::Text(name, false));
     component::Component::new(
         components::Components::Ground,
         "Ground",
@@ -144,7 +144,7 @@ pub fn ground(origin: Point, name: String) -> component::Component {
 pub fn node(origin: Point, name: String) -> component::Component {
     let size = Size::new(40.0, 14.0);
     let mut properties = BTreeMap::new();
-    properties.insert("name", property::Property::Text(name, true));
+    properties.insert("name".to_string(), property::Property::Text(name, true));
     component::Component::new(
         components::Components::Node,
         "Node",

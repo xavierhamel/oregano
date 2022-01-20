@@ -7,29 +7,29 @@ pub fn voltage_ac(origin: Point, name: String) -> component::Component {
     let size = Size::new(80.0, 30.0);
     let offset = 25.0;
     let mut properties = BTreeMap::new();
-    properties.insert("name", property::Property::Text(name, true));
+    properties.insert("name".to_string(), property::Property::Text(name, true));
     properties.insert(
-        "offset",
+        "offset".to_string(),
         property::Property::Unit(0.0, unit::Prefix::None, unit::Unit::Volt, false),
     );
     properties.insert(
-        "amplitude",
+        "amplitude".to_string(),
         property::Property::Unit(10.0, unit::Prefix::None, unit::Unit::Volt, true),
     );
     properties.insert(
-        "frequency",
+        "frequency".to_string(),
         property::Property::Unit(1.0, unit::Prefix::None, unit::Unit::Hertz, false),
     );
     properties.insert(
-        "delay",
+        "delay".to_string(),
         property::Property::Unit(0.0, unit::Prefix::None, unit::Unit::Second, false),
     );
     properties.insert(
-        "damping_factor",
+        "damping_factor".to_string(),
         property::Property::Unit(0.0, unit::Prefix::None, unit::Unit::Hertz, false),
     );
     properties.insert(
-        "phase",
+        "phase".to_string(),
         property::Property::Unit(0.0, unit::Prefix::None, unit::Unit::Degree, false),
     );
     component::Component::new(
@@ -57,9 +57,9 @@ pub fn voltage_dc(origin: Point, name: String) -> component::Component {
     let size = Size::new(80.0, 20.0);
     let offset = 37.0;
     let mut properties = BTreeMap::new();
-    properties.insert("name", property::Property::Text(name, true));
+    properties.insert("name".to_string(), property::Property::Text(name, true));
     properties.insert(
-        "value",
+        "value".to_string(),
         property::Property::Unit(10.0, unit::Prefix::None, unit::Unit::Volt, true),
     );
     component::Component::new(
@@ -88,29 +88,29 @@ pub fn current_ac(origin: Point, name: String) -> component::Component {
     let size = Size::new(80.0, 20.0);
     let offset = 25.0;
     let mut properties = BTreeMap::new();
-    properties.insert("name", property::Property::Text(name, true));
+    properties.insert("name".to_string(), property::Property::Text(name, true));
     properties.insert(
-        "offset",
+        "offset".to_string(),
         property::Property::Unit(0.0, unit::Prefix::None, unit::Unit::Ampere, false),
     );
     properties.insert(
-        "amplitude",
+        "amplitude".to_string(),
         property::Property::Unit(10.0, unit::Prefix::None, unit::Unit::Ampere, true),
     );
     properties.insert(
-        "frequency",
+        "frequency".to_string(),
         property::Property::Unit(1.0, unit::Prefix::None, unit::Unit::Hertz, false),
     );
     properties.insert(
-        "delay",
+        "delay".to_string(),
         property::Property::Unit(0.0, unit::Prefix::None, unit::Unit::Second, false),
     );
     properties.insert(
-        "damping_factor",
+        "damping_factor".to_string(),
         property::Property::Unit(0.0, unit::Prefix::None, unit::Unit::Hertz, false),
     );
     properties.insert(
-        "phase",
+        "phase".to_string(),
         property::Property::Unit(0.0, unit::Prefix::None, unit::Unit::Degree, false),
     );
     component::Component::new(
@@ -144,9 +144,9 @@ pub fn current_dc(origin: Point, name: String) -> component::Component {
     let size = Size::new(80.0, 20.0);
     let offset = 25.0;
     let mut properties = BTreeMap::new();
-    properties.insert("name", property::Property::Text(name, true));
+    properties.insert("name".to_string(), property::Property::Text(name, true));
     properties.insert(
-        "value",
+        "value".to_string(),
         property::Property::Unit(10.0, unit::Prefix::None, unit::Unit::Ampere, true),
     );
     component::Component::new(

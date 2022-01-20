@@ -1,7 +1,8 @@
+use crate::error;
 use std::collections::hash_map;
 use wasm_bindgen::JsCast;
-pub mod form;
 pub mod canvas;
+pub mod form;
 pub mod panel;
 
 /// Return the document of the window, this is used to manipulate the html.
@@ -17,7 +18,6 @@ pub fn select(selector: &str) -> web_sys::Element {
     document().query_selector(selector).unwrap().unwrap()
 }
 
-
 /// Select all elements and returns them in a vector. If the element is not found or another error
 /// happens, this function take care of the error.
 pub fn select_all(selector: &str) -> Vec<web_sys::Element> {
@@ -30,7 +30,7 @@ pub fn select_all(selector: &str) -> Vec<web_sys::Element> {
                 .unwrap()
                 .dyn_into::<web_sys::Element>()
                 .map_err(|_| ())
-                .unwrap()
+                .unwrap(),
         );
     }
     elements
@@ -74,6 +74,22 @@ pub fn inner_html(html: &str) -> web_sys::Element {
     let element = create_element("div", hash_map::HashMap::new(), vec![]);
     element.set_inner_html(html);
     element
+}
+
+/// This will convert the given `web_sys::Element` to a more specific type of element to access
+/// specific functions of an element. For example, convert a `web_sys::Element` to
+/// `web_sys::HtmlInputElement` to get access to the value of the element.
+pub fn convert<T: wasm_bindgen::JsCast>(element: web_sys::Element) -> Result<T, error::Error> {
+    if let Ok(converted) = element.dyn_into::<T>() {
+        Ok(converted)
+    } else {
+        Err(Box::new(error::Dom::ConvertElement))
+    }
+}
+
+/// Return the inner html that is needed for an icon.
+pub fn icon(icon: &str) -> String {
+    format!("<i class=\"fas fa-{}\"></i>", icon)
 }
 
 /// This macro return a hashmap of attributes to be used with the create_element function found in

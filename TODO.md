@@ -50,7 +50,7 @@ SIMULATIONS
  [ ] Ajouter les ampèremètres
 
 NEW FEATURES
- [ ] Pouvoir export/import un projet
+ [o] Pouvoir export/import un projet
  [ ] Quand on appuie sur shift, on ne sélectionne rien mais on commence un
      nouveau fil peut importe si on clique sur un fil ou non. (Comme ça pas
      besoin de plusieurs outils)
@@ -82,3 +82,10 @@ PLOT
      options d'affichage à sa gauche.
  [x] On pourrait aussi avoir plusieurs graphs dans des tabs différents.
  [ ] Logarithm graph (ajouter une option genre une case à cocher)
+ [ ] Quand on a pas tous les plots d'afficher, la couleur qui est affiché n'est
+     pas la bonne pour le point et la valeur du point.
+
+BUG
+ [ ] Lorsqu'on tape dans la bar de droite, alors on va faire l'action dans le
+    canvas. Par exemple, si on met un "r" dans un nom alors on va faire tourner le
+    composant...

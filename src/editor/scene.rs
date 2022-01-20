@@ -105,7 +105,7 @@ impl Scene {
         self.context
             .translate(-self.offset.x + 0.5, -self.offset.y + 0.5)
             .unwrap();
-        self.entities.draw(&self.context);
+        self.entities.draw(&self.context, &self.mouse);
         self.context
             .translate(self.offset.x - 0.5, self.offset.y - 0.5)
             .unwrap();

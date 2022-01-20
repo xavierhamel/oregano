@@ -15,8 +15,8 @@ pub trait Entity: EntityClone {
 
     fn rotate_text(&mut self);
 
-    fn properties(&self) -> &BTreeMap<&'static str, property::Property>;
-    fn set_properties(&mut self, properties: BTreeMap<&'static str, property::Property>);
+    fn properties(&self) -> &BTreeMap<String, property::Property>;
+    fn set_properties(&mut self, properties: BTreeMap<String, property::Property>);
     fn set_connection(&mut self, idx: usize, state: bool);
     fn reset_connections(&mut self);
     fn is_wire(&self) -> bool;
@@ -134,6 +134,8 @@ pub trait Entity: EntityClone {
         );
     }
 
+    fn to_oregano(&self) -> String;
+
     fn draw_properties(&self, context: &web_sys::CanvasRenderingContext2d) {
         let mut offset = if self.text_position() == TextPosition::Top {
             context.set_text_align("center");
@@ -149,8 +151,8 @@ pub trait Entity: EntityClone {
         let mut properties = self
             .properties()
             .iter()
-            .map(|(&key, property)| (key, property, property::metadata_en(key)))
-            .collect::<Vec<(&str, &property::Property, (&str, &str, usize))>>();
+            .map(|(key, property)| (key.clone(), property, property::metadata_en(&key)))
+            .collect::<Vec<(String, &property::Property, (&str, &str, usize))>>();
         properties.sort_by_key(|k| std::cmp::Reverse(k.2 .2));
         for (_, value, _) in properties.iter() {
             let (text, is_visible) = match value {
@@ -215,7 +217,10 @@ pub trait Entity: EntityClone {
         self.rotate_text();
         self.set_connections(connections.polygones[0].clone());
         self.set_origin(self.origin() + (old_center - new_center));
+        self.add_rotation();
     }
+
+    fn add_rotation(&mut self) {}
 
     fn update_bounding_box(&mut self) {
         let (min, max) = self.shape().bounding_box();

@@ -5,10 +5,10 @@ use crate::editor::{
     component::{lumped, probe, source},
     entity,
     entity::Entity,
-    mouse, property, styles, wire,
+    mouse, property, wire,
 };
 use crate::intrinsics::*;
-use crate::simulation;
+use crate::project;
 use std::collections::BTreeMap;
 use wasm_bindgen::JsCast;
 
@@ -24,50 +24,19 @@ pub struct Entities {
 
 impl Entities {
     pub fn new() -> Self {
-        let entities: Vec<Box<dyn entity::Entity>> = vec![
-            Box::new(lumped::resistor(Point::new(200.0, 200.0), "R0".to_string())),
-            Box::new(lumped::capacitor(
-                Point::new(300.0, 200.0),
-                "C0".to_string(),
-            )),
-            Box::new(source::voltage_ac(
-                Point::new(100.0, 195.0),
-                "Vin".to_string(),
-            )),
-            //Box::new(lumped::node(Point::new(200.0, 163.0), "n0".to_string())),
-            //Box::new(lumped::node(Point::new(290.0, 203.0), "n1".to_string())),
-            Box::new(lumped::ground(Point::new(170.0, 210.0), "0".to_string())),
-            Box::new(probe::voltmeter(Point::new(300.0, 180.0), "P0".to_string())),
-            Box::new(wire::Wire::new(
-                Point::new(180.0, 210.0),
-                Point::new(200.0, 200.0),
-            )),
-            Box::new(wire::Wire::new(
-                Point::new(280.0, 210.0),
-                Point::new(300.0, 210.0),
-            )),
-            Box::new(wire::Wire::new(
-                Point::new(380.0, 210.0),
-                Point::new(380.0, 170.0),
-            )),
-            Box::new(wire::Wire::new(
-                Point::new(380.0, 170.0),
-                Point::new(100.0, 170.0),
-            )),
-            Box::new(wire::Wire::new(
-                Point::new(100.0, 170.0),
-                Point::new(100.0, 210.0),
-            )),
-            // Box::new(lumped::resistor(Point::new(100.0, 50.0), format!("R{}", 0))),
-            // Box::new(lumped::capacitor(Point::new(100.0, 110.0), format!("C{}", 1))),
-            // Box::new(source::voltage_dc(Point::new(100.0, 170.0), format!("vcc{}", 2))),
-            // Box::new(lumped::node(Point::new(100.0, 70.0), "n0".to_string())),
-            // Box::new(lumped::ground(Point::new(160.0, 70.0), "gnd".to_string())),
-            // Box::new(wire::Wire::new(Point::new(100.0, 60.0), Point::new(100.0, 180.0), wire::color())),
-            // Box::new(wire::Wire::new(Point::new(180.0, 60.0), Point::new(180.0, 180.0), wire::color())),
-        ];
+        let circuit = web_sys::window()
+            .unwrap()
+            .local_storage()
+            .unwrap()
+            .unwrap()
+            .get_item("circuit")
+            .unwrap()
+            .unwrap();
+        let entities: Vec<Box<dyn entity::Entity>> = match project::import::from_oregano(&circuit) {
+            Ok(entities) => entities,
+            Err(_) => panic!("Yea yea"),
+        };
 
-        //simulation::dialog::update_probes(&entities);
         Self {
             entities,
             selected: Vec::new(),
@@ -286,7 +255,7 @@ impl Entities {
     }
 
     /// Draw entities on the screen.
-    pub fn draw(&self, context: &web_sys::CanvasRenderingContext2d) {
+    pub fn draw(&self, context: &web_sys::CanvasRenderingContext2d, mouse: &mouse::Mouse) {
         // We need to draw the wires first, then the unselected components and finally the selected
         // componenents.
         for entity in &self.entities {
@@ -311,6 +280,14 @@ impl Entities {
 
         if let Some(wire) = &self.floating_wire {
             wire.draw(&context);
+            context.begin_path();
+            //context.move_to(
+            //    wire.shape.polygones[0][1].x + wire.origin().x,
+            //    wire.shape.polygones[0][1].y + wire.origin().y,
+            //);
+            //let position = mouse.scene_pos.snap_to_grid();
+            //context.line_to(position.x, position.y);
+            //context.stroke();
         }
         if let Some(component) = &self.floating_component {
             component.draw(&context);
@@ -358,12 +335,12 @@ impl Entities {
         if self.selected.len() == 1 {
             let entity = &mut self.entities[self.selected[0]];
             let mut properties = BTreeMap::new();
-            for (&key, current_property) in entity.properties().iter() {
+            for (key, current_property) in entity.properties().iter() {
                 if let Ok(property) = property::Property::from_inputs(&format!("property__{}", key))
                 {
-                    properties.insert(key, property);
+                    properties.insert(key.to_string(), property);
                 } else {
-                    properties.insert(key, current_property.clone());
+                    properties.insert(key.to_string(), current_property.clone());
                 }
             }
             entity.set_properties(properties);
