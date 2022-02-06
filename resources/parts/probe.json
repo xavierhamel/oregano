@@ -1,0 +1,37 @@
+{
+    "title":"Probe",
+    "parts": {
+        "voltmeter":{
+            "typ":"probe.voltmeter",
+            "name":"Voltmeter",
+            "layout":"probe.voltmeter",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "name":"Name",
+                        "value":"string[P0]",
+                        "is_visible": true
+                    }
+                }
+            },
+            "spice":""
+        },
+        "ampermeter":{
+            "typ":"probe.ampermeter",
+            "name":"Ampermeter",
+            "layout":"probe.ampermeter",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "name":"Name",
+                        "value":"string[P0]",
+                        "is_visible": true
+                    }
+                }
+            },
+            "spice":"V{prop:name} {conn:0} {conn:1} dc 0"
+        }
+    }
+}

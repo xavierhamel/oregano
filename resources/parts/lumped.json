@@ -1,0 +1,109 @@
+{
+    "title":"Lumped",
+    "parts": {
+        "node": {
+            "typ":"lumped.node",
+            "name":"Node",
+            "layout":"lumped.node",
+            "properties":{
+                "properties":{
+                    "name":{
+                        "order":0,
+                        "name":"Name",
+                        "value":"string[n0]",
+                        "is_visible": true
+                    }
+                }
+            },
+            "spice":""
+        },
+        "resistor":{
+            "typ":"lumped.resistor",
+            "name":"Resistor",
+            "layout":"lumped.resistor",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "name":"Name",
+                        "value":"string[R0]",
+                        "is_visible": true
+                    },
+                    "value":{
+                        "order":1,
+                        "name":"Value",
+                        "value":"unit[10|Ω|]",
+                        "is_visible": true
+                    }
+                }
+            },
+            "spice":"R{prop:name} {conn:0} {conn:1} {prop:value}"
+        },
+        "capacitor":{
+            "typ":"lumped.capacitor",
+            "name":"Capacitor",
+            "layout":"lumped.capacitor",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "value":"string[C0]",
+                        "is_visible": true
+                    },
+                    "value":{
+                        "order":1,
+                        "value":"unit[10|F|]",
+                        "is_visible": true
+                    },
+                    "init_cond":{
+                        "order":2,
+                        "value":"unit[0|V|]",
+                        "is_visible": true
+                    }
+                }
+            },
+            "spice":"C{prop:name} {conn:0} {conn:1} {prop:value} {?init_cond:ic=}{prop?init_cond}"
+        },
+        "inductor":{
+            "typ":"lumped.inductor",
+            "name":"Inductor",
+            "layout":"lumped.inductor",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "value":"string[L0]",
+                        "is_visible": true
+                    },
+                    "value":{
+                        "order":1,
+                        "value":"unit[10|H|]",
+                        "is_visible": true
+                    },
+                    "init_cond":{
+                        "order":2,
+                        "value":"unit[0|A|]",
+                        "is_visible": true
+                    }
+                }
+            },
+            "spice":"L{prop:name} {conn:0} {conn:1} {prop:value} {?init_cond:ic=}{prop?init_cond}"
+        },
+       "ground":{
+            "typ":"lumped.ground",
+            "name":"Ground",
+            "layout":"lumped.ground",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "name":"Name",
+                        "value":"string[0]",
+                        "is_visible": false
+                    }
+                }
+            },
+            "spice":""
+        }
+    }
+}

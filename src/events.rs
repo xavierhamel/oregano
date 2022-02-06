@@ -1,5 +1,5 @@
 use crate::intrinsics::*;
-use crate::{dom, error, schema, schema::parts, schema::parts::part};
+use crate::{dom, error, plot, schema, PARTS};
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
@@ -10,11 +10,14 @@ pub enum Event {
     MouseMove,
     MouseDown,
     MouseUp,
+    MouseLeave,
     Wheel,
     KeyDown,
     Click,
     Change,
     Resize,
+    NgspiceResponse,
+    NgspiceRequest,
 }
 
 impl fmt::Display for Event {
@@ -23,11 +26,14 @@ impl fmt::Display for Event {
             Self::MouseMove => "mousemove",
             Self::MouseUp => "mouseup",
             Self::MouseDown => "mousedown",
+            Self::MouseLeave => "mouseleave",
             Self::Wheel => "wheel",
             Self::KeyDown => "keydown",
             Self::Click => "click",
             Self::Change => "change",
             Self::Resize => "resize",
+            Self::NgspiceRequest => "ngspice_request",
+            Self::NgspiceResponse => "ngspice_response",
         };
         write!(f, "{}", out)
     }
@@ -40,11 +46,14 @@ impl std::str::FromStr for Event {
             "mousemove" => Ok(Self::MouseMove),
             "mouseup" => Ok(Self::MouseUp),
             "mousedown" => Ok(Self::MouseDown),
+            "mouseleave" => Ok(Self::MouseLeave),
             "wheel" => Ok(Self::Wheel),
             "keydown" => Ok(Self::KeyDown),
             "click" => Ok(Self::Click),
             "change" => Ok(Self::Change),
             "resize" => Ok(Self::Resize),
+            "ngspice_request" => Ok(Self::NgspiceRequest),
+            "ngspice_response" => Ok(Self::NgspiceResponse),
             _ => Err(Box::new(error::Internal::Event)),
         }
     }
@@ -94,7 +103,7 @@ impl EventListener {
     }
 }
 
-pub fn add_events_schema(schema: Rc<RefCell<schema::Schema>>) {
+pub fn add_events_schema(schema: Rc<RefCell<schema::Schema>>, plots: Rc<RefCell<plot::Plots>>) {
     let canvas = dom::select(crate::SCHEMA_CANVAS_ID);
     //let canvas = dom::canvas::as_canvas(dom::select(crate::SCHEMA_CANVAS_ID));
     let s = schema.clone();
@@ -136,58 +145,129 @@ pub fn add_events_schema(schema: Rc<RefCell<schema::Schema>>) {
                 &element,
                 &Event::Click,
                 Box::new(move |_event: web_sys::MouseEvent| {
-                    let part = e
-                        .get_attribute("data-part")
-                        .unwrap()
-                        .parse::<parts::Typ>()
-                        .unwrap();
-                    s.borrow_mut().add_part(part::Part::from(part));
+                    let part = e.get_attribute("data-part").unwrap();
+                    s.borrow_mut().add_part(PARTS.get(&part));
                 }),
             )
         });
-    let s = schema.clone();
-    EventListener::add_mutation_observer(
-        &dom::select("#menu__property-list"),
-        Box::new(move |_: web_sys::MutationRecord| {
-            dom::select_all("[name^=\"property__\"]")
-                .into_iter()
-                .for_each(|element| {
-                    let sc = s.clone();
-                    EventListener::add::<web_sys::Event>(
-                        &element,
-                        &Event::Change,
-                        Box::new(move |_event: web_sys::Event| {
-                            sc.borrow_mut().properties_dispatch();
-                        }),
-                    );
-                });
-        }),
-    );
+    [
+        dom::select("#menu__properties"),
+        dom::select("#menu__model-properties"),
+    ]
+    .iter()
+    .for_each(|element| {
+        let s = schema.clone();
+        EventListener::add_mutation_observer(
+            element,
+            Box::new(move |_: web_sys::MutationRecord| {
+                dom::select_all("[name^=\"property__\"]")
+                    .into_iter()
+                    .for_each(|element| {
+                        let sc = s.clone();
+                        EventListener::add::<web_sys::Event>(
+                            &element,
+                            &Event::Change,
+                            Box::new(move |_event: web_sys::Event| {
+                                sc.borrow_mut().properties_dispatch();
+                            }),
+                        );
+                    });
+            }),
+        );
+    });
 
     let s = schema.clone();
+    let p = plots.clone();
     EventListener::add(
         &web_sys::window().unwrap(),
         &Event::Resize,
         Box::new(move |_event: web_sys::CustomEvent| {
             s.borrow_mut().resize_dispatch();
+            p.borrow_mut().resize();
         }),
-    )
+    );
 
-    // {
-    //     let editor = editor.clone();
-    //     let closure = Closure::wrap(Box::new(move |_event: web_sys::MouseEvent| {
-    //         editor
-    //             .borrow_mut()
-    //             .scene
-    //             .entities
-    //             .add_floating_component(&component.typ);
-    //         editor.borrow_mut().update();
-    //     }) as Box<dyn FnMut(_)>);
-    //     button
-    //         .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
-    //         .unwrap();
-    //     closure.forget();
-    // }
+    let p = plots.clone();
+    EventListener::add(
+        &dom::select(plot::CANVAS_ID),
+        &Event::MouseMove,
+        Box::new(move |event: web_sys::MouseEvent| {
+            p.borrow_mut().mouse_updated(Some(Point::from(event)));
+        }),
+    );
+
+    let p = plots.clone();
+    EventListener::add(
+        &dom::select(plot::CANVAS_ID),
+        &Event::MouseLeave,
+        Box::new(move |_: web_sys::MouseEvent| {
+            p.borrow_mut().mouse_updated(None);
+        }),
+    );
+    let p = plots.clone();
+    let s = schema.clone();
+    EventListener::add(
+        &web_sys::window().unwrap(),
+        &Event::NgspiceResponse,
+        Box::new(move |event: web_sys::CustomEvent| {
+            let (x_label, y_labels, series) = plot::parser::parse_spice_output(
+                &s.borrow_mut().probes,
+                &event.detail().as_string().unwrap(),
+            );
+            p.borrow_mut().update_data(series, x_label, y_labels);
+        }),
+    );
+
+    let p = plots.clone();
+    EventListener::add(
+        &dom::select("#sim__result-settings"),
+        &Event::Click,
+        Box::new(move |_: web_sys::MouseEvent| p.borrow_mut().update_visible_series()),
+    );
+    let p = plots.clone();
+    EventListener::add(
+        &dom::select("#sim__results-selector"),
+        &Event::Click,
+        Box::new(move |_: web_sys::MouseEvent| p.borrow_mut().select()),
+    );
+    let p = plots.clone();
+    EventListener::add(
+        &dom::select("#sim__results-add"),
+        &Event::Click,
+        Box::new(move |_: web_sys::MouseEvent| p.borrow_mut().add_plot()),
+    );
+
+    dom::select_all("[name^=\"toolbar__\"]")
+        .into_iter()
+        .for_each(|element| {
+            let s = schema.clone();
+            let p = plots.clone();
+            EventListener::add::<web_sys::Event>(
+                &element,
+                &Event::Change,
+                Box::new(move |_: web_sys::Event| {
+                    s.borrow_mut().toolbar_dispatch();
+                    p.borrow_mut().resize();
+                }),
+            )
+        });
+
+    EventListener::add(
+        &dom::select("#error__close"),
+        &Event::Click,
+        Box::new(move |_: web_sys::MouseEvent| {
+            let _ = dom::select("#error__container").set_attribute("class", "hide");
+        }),
+    );
+
+    let s = schema.clone();
+    EventListener::add(
+        &dom::select("[name=\"sim__type\"]"),
+        &Event::Change,
+        Box::new(move |_: web_sys::Event| {
+            s.borrow_mut().simulation_selector_dispatch();
+        }),
+    );
 }
 
 // This will add all the event necessary for the editor to work. There is probably a better way to

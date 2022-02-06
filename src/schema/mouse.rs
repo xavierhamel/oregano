@@ -1,6 +1,7 @@
+use crate::dom::form::radio;
 use crate::intrinsics::*;
-use crate::schema::{parts, scene, wire};
-use crate::{clog, events};
+use crate::schema::{parts, scene, utils, wires};
+use crate::{dom, events};
 
 #[derive(Eq, PartialEq)]
 pub enum State {
@@ -17,14 +18,39 @@ pub enum Action {
     MoveEntity,
     ReleaseEntity,
     DrawWire,
+    EditWire,
+    ReleaseWire,
     None,
 }
 
 impl Action {
-    pub fn set(&mut self, action: Self) {
-        if self != &Action::DrawWire {
+    pub fn set_protected(&mut self, action: Self) {
+        if self != &Action::DrawWire && self != &Action::EditWire {
             *self = action;
         }
+        self.update_ui();
+    }
+
+    pub fn set(&mut self, action: Self) {
+        *self = action;
+        self.update_ui();
+    }
+
+    pub fn update_ui(&self) {
+        let selected = if *self == Self::DrawWire || *self == Self::EditWire {
+            utils::ToolbarTool::Wire
+        } else {
+            utils::ToolbarTool::Mouse
+        };
+        let _ = radio::set_checked::<utils::ToolbarTool>("[name=\"toolbar__mouse\"]", selected);
+
+        if let Ok(element) = dom::convert::<web_sys::HtmlElement>(dom::select("body")) {
+            if *self == Self::DrawWire {
+                let _ = element.style().set_property("cursor", "crosshair");
+            } else {
+                let _ = element.style().set_property("cursor", "default");
+            }
+        };
     }
 }
 
@@ -62,11 +88,11 @@ impl Mouse {
         };
     }
 
-    pub fn update_action(&mut self, parts: &parts::Parts, wires: &wire::Wires) {
+    pub fn update_action(&mut self, parts: &parts::Parts, wires: &wires::Wires) {
         let selected_count = parts.selected.len() + wires.selected.len();
         match self.state {
             State::Down | State::Drag => {
-                self.action.set(if selected_count > 0 {
+                self.action.set_protected(if selected_count > 0 {
                     Action::MoveEntity
                 } else {
                     Action::MoveView
@@ -82,7 +108,7 @@ impl Mouse {
     pub fn mousemove(&mut self) {
         if self.state == State::Down {
             self.state = State::Drag;
-            self.action.set(Action::MoveView);
+            self.action.set_protected(Action::MoveView);
         }
     }
 
@@ -97,9 +123,9 @@ impl Mouse {
             self.state = State::Up;
         }
         if self.action == Action::MoveEntity {
-            self.action.set(Action::ReleaseEntity);
+            self.action.set_protected(Action::ReleaseEntity);
         } else {
-            self.action.set(Action::None);
+            self.action.set_protected(Action::None);
         }
     }
 }

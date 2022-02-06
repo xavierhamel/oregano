@@ -1,5 +1,7 @@
-use crate::schema::{parts, parts::part, properties, wire};
-use crate::{clog, dom, error, sim};
+use crate::schema::{parts, properties, wires};
+use crate::sim::verifier;
+use crate::{dom, dom::form::select, error, sim, PARTS};
+use std::convert::TryFrom;
 
 #[derive(PartialEq)]
 pub struct Connection {
@@ -14,34 +16,64 @@ impl Connection {
 }
 
 pub struct Circuit {
-    wires: Vec<wire::Wire>,
-    parts: Vec<part::Part>,
+    wires: Vec<wires::Wire>,
+    parts: Vec<parts::Part>,
+    errors: Vec<error::Error>,
 }
 
 impl Circuit {
-    pub fn new(wires: Vec<wire::Wire>, parts: Vec<part::Part>) -> Result<Self, error::Error> {
-        let mut circuit = Self { wires, parts };
-        let mut is_ground_connected = false;
-        clog!("{}", circuit.nodes().len());
-        circuit.nodes().iter().enumerate().for_each(|(idx, node)| {
-            let parts = circuit.parts_connected_to_node(&node);
-            clog!("{}", parts.len());
-            let name = circuit.node_name(&parts, idx).unwrap();
-            parts.iter().for_each(|conn| {
-                if circuit.parts[conn.part].typ == parts::Typ::Ground {
-                    is_ground_connected = true;
-                }
-                circuit.parts[conn.part].layout.connect(conn, &name);
-            });
-        });
-        if !is_ground_connected {
-            Err(Box::new(error::Sim::NoGround))
-        } else {
+    pub fn new(
+        wires: Vec<wires::Wire>,
+        parts: Vec<parts::Part>,
+    ) -> Result<Self, Vec<error::Error>> {
+        let mut circuit = Self {
+            wires,
+            parts,
+            errors: Vec::new(),
+        };
+        let mut verifier = verifier::Verifier::check(&circuit.parts, &circuit.wires);
+        circuit.errors.append(&mut verifier.errors);
+        circuit.pad_parts_connectors();
+        circuit.connect_parts_to_node();
+        if circuit.errors.len() == 0 {
             Ok(circuit)
+        } else {
+            Err(circuit.errors)
         }
     }
 
-    fn nodes(&mut self) -> Vec<Vec<wire::Wire>> {
+    /// Here we add wires where the connectors are. This is done because when there is no wires
+    /// between two parts, those parts are still connected. Adding those wire connect the parts
+    /// together. If no wires were added, the parts would not be seen as connected.
+    fn pad_parts_connectors(&mut self) {
+        for part in self.parts.iter() {
+            for connector in part.layout.connectors.iter() {
+                self.wires.push(wires::Wire::new(
+                    part.layout.origin + connector.origin,
+                    part.layout.origin + connector.origin,
+                ));
+            }
+        }
+    }
+
+    /// Connect every part to a name node. Also check if a node is missing a connection.
+    fn connect_parts_to_node(&mut self) {
+        self.nodes().iter().enumerate().for_each(|(idx, node)| {
+            let parts = self.parts_connected_to_node(&node);
+            // TODO: Add a check for name collision with named node. If a node is name `a`, do not
+            // give the node the generic name `a`.
+            let name = self.node_name(&parts, idx).unwrap();
+            if parts.len() < 2 {
+                self.errors
+                    .push(Box::new(error::Sim::MissingConnectionNode(name.clone())))
+            }
+            parts.iter().for_each(|conn| {
+                self.parts[conn.part].layout.connect(conn, &name);
+            });
+        });
+    }
+
+    fn nodes(&mut self) -> Vec<Vec<wires::Wire>> {
         let mut nodes = Vec::new();
         let mut visited = Vec::new();
         for (idx, wire) in self.wires.iter().enumerate() {
@@ -58,7 +90,7 @@ impl Circuit {
         nodes
     }
 
-    fn find_wires_for_node(&self, parent: &wire::Wire) -> Vec<usize> {
+    fn find_wires_for_node(&self, parent: &wires::Wire) -> Vec<usize> {
         let mut new_wires_idx = self.wires_connected_to_wire(parent);
         let mut connected = new_wires_idx.clone();
 
@@ -86,7 +118,7 @@ impl Circuit {
         let mut names = Vec::new();
         for conn in connections.iter() {
             let part = &self.parts[conn.part];
-            if part.typ == parts::Typ::Ground || part.typ == parts::Typ::Node {
+            if part.typ == "lumped.ground".to_string() || part.typ == "lumped.node".to_string() {
                 if let Ok(property) = part.properties.get("name") {
                     match &property.value {
                         properties::Value::String(name) => names.push(name.clone()),
@@ -109,7 +141,7 @@ impl Circuit {
     ///
     /// TODO: If 2 wires cross over each other, they are currently not returned as connected. Only
     /// wires that the extremities are touching
-    fn wires_connected_to_wire(&self, wire: &wire::Wire) -> Vec<usize> {
+    fn wires_connected_to_wire(&self, wire: &wires::Wire) -> Vec<usize> {
         self.wires
             .iter()
             .enumerate()
@@ -118,7 +150,7 @@ impl Circuit {
             .collect::<Vec<usize>>()
     }
 
-    fn parts_connected_to_node(&self, node: &Vec<wire::Wire>) -> Vec<Connection> {
+    fn parts_connected_to_node(&self, node: &Vec<wires::Wire>) -> Vec<Connection> {
         node.iter().fold(Vec::new(), |mut acc, wire| {
             acc.append(
                 &mut self
@@ -131,7 +163,7 @@ impl Circuit {
         })
     }
 
-    fn parts_connected_to_wire(&self, wire: &wire::Wire) -> Vec<Connection> {
+    fn parts_connected_to_wire(&self, wire: &wires::Wire) -> Vec<Connection> {
         self.parts
             .iter()
             .enumerate()
@@ -147,49 +179,16 @@ impl Circuit {
             })
     }
 
-    pub fn to_string(&self) -> Result<String, error::Error> {
-        let mut string = String::from("A description of the circuit\n");
+    pub fn to_string(&self) -> Result<(String, sim::Probes), error::Error> {
+        let mut parts = String::from("A Circuit\n");
         for part in self.parts.iter() {
-            string.push_str(&sim::part_to_string(&part)?);
-            string.push_str("\n");
+            parts.push_str(&part.to_spice()?);
+            parts.push_str("\n");
         }
 
-        let probes = sim::probes_to_strings(&self.parts)?;
-        if probes.len() > 0 {
-            let analysis =
-                match dom::form::select::value::<String>(dom::select("[name=\"sim__type\"]")) {
-                    Ok(typ) if typ == "tran" => sim::tran_analysis_to_string(probes)?,
-                    Ok(typ) if typ == "freq" => sim::freq_analysis_to_string(probes)?,
-                    err => return err,
-                };
-            string.push_str(&analysis);
-            Ok(string)
-        } else {
-            Err(Box::new(error::Sim::NoProbe))
-        }
+        let probes = sim::Probes::try_from(&self.parts)?;
+        let simulation = select::value::<String>(dom::select("[name=\"sim__type\"]"))?;
+        let analysis = sim::Analysis::try_from((simulation, &probes))?;
+        Ok((format!("{}{}{}", parts, PARTS.models(), analysis), probes))
     }
-
-    // fn _find_ground(&self) -> Option<usize> {
-    //     for (idx, component) in self.components.iter().enumerate() {
-    //         if component.typ == component::components::Components::Ground {
-    //             return Some(idx);
-    //         }
-    //     }
-    //     None
-    // }
-
-    // fn _wires_connected_to_component(&self, component: &component::Component) -> Vec<usize> {
-    //     let mut connected = vec![];
-    //     for (idx, wire) in self.wires.iter().enumerate() {
-    //         'outer: for &contact in &wire.shape().polygones[0] {
-    //             for conn in component.connections().iter() {
-    //                 if contact == *conn {
-    //                     connected.push(idx);
-    //                     break 'outer;
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     connected
-    // }
 }

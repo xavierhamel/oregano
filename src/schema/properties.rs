@@ -1,8 +1,29 @@
 use crate::dom::form::text_input;
 use crate::schema::props;
 use crate::{dom, error, unit};
+use serde::Deserialize;
+use serde_json;
 use std::collections::HashMap;
 use std::{fmt, str};
+
+pub struct PropertiesData(HashMap<String, PropertyData>);
+impl PropertiesData {
+    pub fn new() -> Self {
+        Self(
+            serde_json::from_str(include_str!("../../resources/properties.json"))
+                .expect("JSON was not well-formatted"),
+        )
+    }
+    pub fn get(&self, key: String) -> Option<&PropertyData> {
+        self.0.get(&key)
+    }
+}
+
+#[derive(Deserialize)]
+pub struct PropertyData {
+    pub title: String,
+    pub description: Option<String>,
+}
 
 /// A value which is stored inside a property of a part. A property can be anything like a string,
 /// a number or a more complexe data structure (like a number with a unit (Unit)).
@@ -15,16 +36,19 @@ pub enum Value {
 
 impl Value {
     /// Return an input or a group of inputs that are necessery to represent this value.
-    pub fn into_input(&self, key: &str) -> Vec<web_sys::Element> {
+    pub fn into_input(&self, key: &str, is_model: bool) -> Vec<web_sys::Element> {
         let value = self.value_to_string();
         let name = format!("property__{}", key);
-        let attributes: HashMap<&str, &str> = dom::attributes! {
+        let mut attributes: HashMap<&str, &str> = dom::attributes! {
             "class" => "",
             "data-property" => &key,
             "data-property-type" => self.typ(),
             "name" => &name,
             "value" => &value,
         };
+        if is_model {
+            attributes.insert("data-is-model", "");
+        }
         let value_input = text_input::new(attributes);
 
         if let Value::Unit(_, unit, prefix) = &self {
@@ -61,6 +85,14 @@ impl Value {
             Value::String(value) => value.clone(),
             Value::F64(value) => value.to_string(),
             Value::Unit(value, _, _) => value.to_string(),
+        }
+    }
+
+    fn format_infinity(&self, value: f64) -> String {
+        if value == f64::INFINITY {
+            String::from("1.8e+308")
+        } else {
+            value.to_string()
         }
     }
 }
@@ -137,8 +169,10 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::String(value) => write!(f, "{}", value),
-            Value::F64(value) => write!(f, "{}", value),
-            Value::Unit(value, _, prefix) => write!(f, "{}{:?}", value, prefix),
+            Value::F64(value) => write!(f, "{}", self.format_infinity(*value)),
+            Value::Unit(value, _, prefix) => {
+                write!(f, "{}{:?}", self.format_infinity(*value), prefix)
+            }
         }
     }
 }
@@ -156,19 +190,24 @@ impl fmt::Debug for Value {
 /// A property that help define a part of a circuit. A property can be private (only used
 /// internaly) or not. The order represent the order that the property should be shown in menus for
 /// example.
-#[derive(Clone)]
+#[derive(Clone, Deserialize)]
 pub struct Property {
     order: usize,
+    #[serde(with = "serde_with::rust::display_fromstr")]
     pub value: Value,
+    #[serde(default = "bool::default")]
     is_visible: bool,
+    #[serde(default = "bool::default")]
+    pub is_model: bool,
 }
 
 impl Property {
-    pub fn new(value: Value, is_visible: bool, order: usize) -> Self {
+    pub fn new(value: Value, is_visible: bool, order: usize, is_model: bool) -> Self {
         Self {
             value: Value::from(value),
             is_visible,
             order,
+            is_model,
         }
     }
 
@@ -179,11 +218,12 @@ impl Property {
     /// Converts the property into an input that can be used in a dialog based on the type of the
     /// property.
     pub fn into_input(&self, name: &str) -> web_sys::Element {
-        let mut value_inputs = self.value.into_input(name);
-        value_inputs.push(dom::form::checkbox::create(
-            &format!("property__{}-is-visible", name),
+        let mut value_inputs = self.value.into_input(name, self.is_model);
+        let input_name = format!("property__{}-is-visible", name);
+        value_inputs.push(dom::form::checkbox::new(
+            &dom::form::checkbox::dual_icon("eye", "eye-slash"),
+            dom::attributes! { "name" => &input_name[..], "class" => "form__toggle-input-dual-icon" },
             self.is_visible,
-            &dom::icon("eye"),
         ));
         dom::form::group(value_inputs)
     }
@@ -191,12 +231,13 @@ impl Property {
     pub fn from_input(key: &str, order: usize) -> Result<Self, error::Error> {
         let value_input = dom::select(&format!("[data-property=\"{}\"]", key));
         let value = Value::from(value_input.clone());
+        let is_model = value_input.get_attribute("data-is-model").is_some();
         let is_visible = dom::form::checkbox::value(dom::select(&format!(
             "[name=\"property__{}-is-visible\"]",
             key
         )))
         .unwrap();
-        Ok(Property::new(value, is_visible, order))
+        Ok(Property::new(value, is_visible, order, is_model))
     }
 }
 
@@ -213,27 +254,32 @@ impl std::str::FromStr for Property {
             &s[..]
         };
         let data = substring.split(";").collect::<Vec<&str>>();
-        if data.len() != 3 {
+        if data.len() != 4 {
             return Err(Box::new(error::Import::MissingToken));
         }
         let value = data[0].parse::<Value>()?;
         let is_visible = data[1].parse::<bool>()?;
-        let order = data[2].parse::<usize>()?;
+        let is_model = data[2].parse::<bool>()?;
+        let order = data[3].parse::<usize>()?;
 
-        Ok(Property::new(value, is_visible, order))
+        Ok(Property::new(value, is_visible, order, is_model))
     }
 }
 
 impl fmt::Debug for Property {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?};{};{}", self.value, self.is_visible, self.order)
+        write!(
+            f,
+            "{:?};{};{};{}",
+            self.value, self.is_visible, self.is_model, self.order
+        )
     }
 }
 
 /// A group of properties that help define a part.
-#[derive(Clone)]
+#[derive(Clone, Deserialize)]
 pub struct Properties {
-    properties: HashMap<String, Property>,
+    pub properties: HashMap<String, Property>,
 }
 
 impl Properties {
@@ -282,14 +328,17 @@ impl std::str::FromStr for Properties {
     /// `name<text[text];is_visible;order>,value<unit[value];is_visible;order>`
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut properties = props::props! {};
-        for property in s.split(",") {
-            if let Some(idx) = property.find('<') {
-                properties.insert(
-                    property[..idx].to_string(),
-                    property[idx..].parse::<Property>()?,
-                );
-            } else {
-                return Err(Box::new(error::Import::MissingToken));
+        for property in s.split("!") {
+            if property.len() > 0 {
+                match property.find('<') {
+                    Some(idx) => {
+                        properties.insert(
+                            property[..idx].to_string(),
+                            property[idx..].parse::<Property>()?,
+                        );
+                    }
+                    _ => return Err(Box::new(error::Import::MissingToken)),
+                }
             }
         }
         Ok(Properties::new(properties))
@@ -300,7 +349,7 @@ impl fmt::Debug for Properties {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut output = String::new();
         self.properties.iter().for_each(|(key, property)| {
-            output.push_str(&format!("{}<{:?}>", key, property));
+            output.push_str(&format!("{}<{:?}>!", key, property));
         });
         write!(f, "{}", output)
     }

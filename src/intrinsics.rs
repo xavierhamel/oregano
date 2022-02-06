@@ -1,8 +1,10 @@
+use crate::error;
+use serde::Deserialize;
 use std::fmt;
 
 /// Represent a coordinate in the canvas. When there's an x and a y coord, use this to represent
 /// it.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Deserialize)]
 pub struct Point {
     pub x: f64,
     pub y: f64,
@@ -13,6 +15,10 @@ impl Point {
 
     pub fn new(x: f64, y: f64) -> Self {
         Self { x, y }
+    }
+
+    pub fn default() -> Self {
+        Self { x: 0.0, y: 0.0 }
     }
 
     pub fn update(&mut self, x: f64, y: f64) {
@@ -74,6 +80,26 @@ impl From<web_sys::MouseEvent> for Point {
     }
 }
 
+impl std::str::FromStr for Point {
+    type Err = error::Error;
+    fn from_str(s: &str) -> Result<Point, error::Error> {
+        let data = s.split(",").collect::<Vec<&str>>();
+        if data.len() != 2 {
+            Err(Box::new(error::Import::MissingToken))
+        } else {
+            match (data[0].parse::<f64>(), data[1].parse::<f64>()) {
+                (Ok(x), Ok(y)) => Ok(Point::new(x, y)),
+                _ => Err(Box::new(error::Import::UnexpectedValue)),
+            }
+        }
+    }
+}
+
+impl fmt::Display for Point {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{},{}", self.x, self.y)
+    }
+}
 impl fmt::Debug for Point {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "(x:{},y:{})", self.x, self.y)
@@ -82,7 +108,7 @@ impl fmt::Debug for Point {
 
 /// Represent the size of something in the canvas. It is the same thing as the point but the
 /// difference is the name of the field of the struct.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Deserialize)]
 pub struct Size {
     pub w: f64,
     pub h: f64,
@@ -91,6 +117,10 @@ pub struct Size {
 impl Size {
     pub fn new(w: f64, h: f64) -> Self {
         Self { w, h }
+    }
+
+    pub fn default() -> Self {
+        Self::new(0.0, 0.0)
     }
 }
 

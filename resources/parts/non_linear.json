@@ -1,0 +1,141 @@
+{
+    "title":"Non linear",
+    "parts": {
+        "diode":{
+            "typ":"non_linear.diode",
+            "name":"Diode",
+            "layout":"non_linear.diode",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "value":"string[d0]",
+                        "is_visible": true
+                    },
+                    "diode_is":{
+                        "order":1,
+                        "value":"unit[0.01|A|p]",
+                        "is_model":true
+                    },
+                    "diode_rs":{
+                        "order":2,
+                        "value":"unit[0|Ω|]",
+                        "is_model":true
+                    },
+                    "diode_n":{
+                        "order":3,
+                        "value":"f64[1]",
+                        "is_model":true
+                    },
+                    "diode_tt":{
+                        "order":4,
+                        "value":"unit[0|s|]",
+                        "is_model":true
+                    },
+                    "diode_cjo":{
+                        "order":5,
+                        "value":"unit[0|F|]",
+                        "is_model":true
+                    },
+                    "diode_vj":{
+                        "order":6,
+                        "value":"unit[1|V|]",
+                        "is_model":true
+                    },
+                    "diode_m":{
+                        "order":7,
+                        "value":"f64[0.5]",
+                        "is_model":true
+                    },
+                    "diode_eg":{
+                        "order":8,
+                        "value":"unit[1.11|V|]",
+                        "is_model":true
+                    },
+                    "diode_xti":{
+                        "order":9,
+                        "value":"f64[3]",
+                        "is_model":true
+                    },
+                    "diode_kf":{
+                        "order":10,
+                        "value":"f64[0]",
+                        "is_model":true
+                    },
+                    "diode_af":{
+                        "order":11,
+                        "value":"f64[1]",
+                        "is_model":true
+                    },
+                    "diode_fc":{
+                        "order":12,
+                        "value":"f64[0.5]",
+                        "is_model":true
+                    },
+                    "diode_bv":{
+                        "order":13,
+                        "value":"unit[inf|V|]",
+                        "is_model":true
+                    },
+                    "diode_ibv":{
+                        "order":14,
+                        "value":"unit[1|A|m]",
+                        "is_model":true
+                    }
+                }
+            },
+            "spice":"D{prop:name} {conn:0} {conn:1} diode-custom-{prop:name}\n .model diode-custom-{prop:name} d(IS={prop:diode_is} RS={prop:diode_rs} N={prop:diode_n} TT={prop:diode_tt} CJO={prop:diode_cjo} VJ={prop:diode_vj} M={prop:diode_m} EG={prop:diode_eg} XTI={prop:diode_xti} KF={prop:diode_kf}  AF={prop:diode_af} FC={prop:diode_fc} BV={prop:diode_bv} IBV={prop:diode_ibv})"
+        },
+        "diode-1N4148":{
+            "typ":"non_linear.diode-1N4148",
+            "name":"Diode 1N4148",
+            "layout":"non_linear.diode",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "value":"string[d0]",
+                        "is_visible": true
+                    }
+                }
+            },
+            "spice":"D{prop:name} {conn:0} {conn:1} diode-1N4148"
+        },
+        "diode-ideal":{
+            "typ":"non_linear.diode-ideal",
+            "name":"Ideal Diode",
+            "layout":"non_linear.diode",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "value":"string[d0]",
+                        "is_visible": true
+                    }
+                }
+            },
+            "spice":"D{prop:name} {conn:0} {conn:1} diode-ideal"
+        },
+        "transistor-pnp":{
+            "typ":"non_linear.transistor-pnp",
+            "name":"Transistor PNP",
+            "layout":"non_linear.transistor",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "value":"string[Q0]",
+                        "is_visible": true
+                    }
+                }
+            },
+            "spice":"D{prop:name} {conn:0} {conn:1} {conn:2} transistor-pnp"
+        }
+    },
+    "models":[
+        "diode-1N4148 d(IS=35p RS=64m N=1.24 TT=5n CJO=4p M=0.285 VJ=0.6 BV=75)",
+        "diode-ideal d(Ron=1 Roff=1Meg Vfwd=1 Vrev=2)",
+
+        "transistor-pnp PNP"
+    ]
+}

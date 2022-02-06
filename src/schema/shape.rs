@@ -1,10 +1,11 @@
 use crate::intrinsics::*;
 use crate::schema::ctx;
+use serde::Deserialize;
 
 /// A poly represent a polygones (but it is more a line that can be close). When drawn, it will
 /// link each point one after the other. To close the shape, the last point must be the same as the
 /// first one.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Deserialize)]
 pub struct Poly {
     pub points: Vec<Point>,
 }
@@ -54,13 +55,13 @@ impl Poly {
     }
 
     /// Find the shortest distance between a point and one of the segment of the polygone
-    pub fn shortest_distance_with_point(&self, origin: Point, point: Point) -> Option<f64> {
+    pub fn distance_with_point(&self, origin: Point, point: Point) -> Option<f64> {
         if self.points.len() == 0 {
             return None;
         }
         let mut min_distance = (origin + self.points[0]).distance(point);
         for idx in 1..self.points.len() {
-            min_distance = min_distance.min(self.shortest_distance_point_and_segment(
+            min_distance = min_distance.min(self.distance_point_and_segment(
                 point,
                 self.points[idx - 1] + origin,
                 self.points[idx] + origin,
@@ -69,7 +70,7 @@ impl Poly {
         Some(min_distance)
     }
 
-    fn shortest_distance_point_and_segment(&self, point: Point, start: Point, end: Point) -> f64 {
+    fn distance_point_and_segment(&self, point: Point, start: Point, end: Point) -> f64 {
         let length = start.distance(end);
         let dot_product =
             (point.x - start.x) * (end.x - start.x) + (point.y - start.y) * (end.y - start.y);
@@ -90,12 +91,15 @@ impl Poly {
         if self.points.len() > 0 {
             let diff = self.points[0].snap_to_grid() - self.points[0];
             self.translate(diff);
+            self.points
+                .iter_mut()
+                .for_each(|point| *point = point.snap_to_grid());
         }
     }
 }
 
 /// An arc is a circle or a part of a circle.
-#[derive(Clone)]
+#[derive(Clone, Deserialize)]
 pub struct Arc {
     center: Point,
     radius: f64,
@@ -151,14 +155,52 @@ impl Arc {
 }
 
 /// A shape is a group of arcs and polygones that are drawn togheter.
-#[derive(Clone)]
+#[derive(Clone, Deserialize)]
 pub struct Shape {
     polys: Vec<Poly>,
     arcs: Vec<Arc>,
+    #[serde(default = "Size::default")]
     pub size: Size,
 }
 
 impl Shape {
+    pub fn to_json(&self) -> String {
+        let mut polys = self.polys.iter().fold(String::new(), |mut acc, poly| {
+            let mut points = poly.points.iter().fold(String::new(), |mut a, p| {
+                a.push_str(&format!("{{\"x\":{},\"y\":{}}},", p.x, p.y));
+                a
+            });
+            points.pop();
+            acc.push_str(&format!("            {{\"points\":[{}]}},\n", points));
+            //acc.push_str(&format!("{{\"poly\":{{\"points\":[{}]}}}}", points));
+            acc
+        });
+        polys.pop();
+        polys.pop();
+
+        let mut arcs = self.arcs.iter().fold(String::new(), |mut acc, arc| {
+            acc.push_str(&format!(
+                "            {{\"center\":{{\"x\":{},\"y\":{}}}, \"radius\":{}, \"start\":{}, \"end\":{}}},\n",
+                //"{{\"arc\":{{\"center\":{{\"x\":{},\"y\":{}}}, \"radius\":{}, \"start\":{}, \"end\":{}}}}}",
+                arc.center.x,
+                arc.center.y,
+                arc.radius,
+                arc.start,
+                arc.end
+            ));
+            acc
+        });
+        arcs.pop();
+        arcs.pop();
+        format!(
+            "{{
+        \"polys\":[\n{}\n        ],
+        \"arcs\":[\n{}\n        ],
+        \"size\":{{\"w\":{},\"h\":{}}}
+    }}",
+            polys, arcs, self.size.w, self.size.h
+        )
+    }
     pub fn new(polys: Vec<Vec<Point>>, arcs: Vec<Arc>) -> Self {
         let ps = polys
             .into_iter()
@@ -231,5 +273,11 @@ impl Shape {
             && point.x <= offset.x + self.size.w
             && point.y >= offset.y
             && point.y <= offset.y + self.size.h;
+    }
+
+    pub fn append(&mut self, mut other: Shape) {
+        self.polys.append(&mut other.polys);
+        self.arcs.append(&mut other.arcs);
+        self.size();
     }
 }

@@ -15,7 +15,10 @@ pub fn document() -> web_sys::Document {
 /// Select an element and returns it. If the element is not found or another error happens, this
 /// function take care of the error.
 pub fn select(selector: &str) -> web_sys::Element {
-    document().query_selector(selector).unwrap().unwrap()
+    match document().query_selector(selector).unwrap() {
+        Some(element) => element,
+        _ => panic!("Élément non trouvé: {}", selector),
+    }
 }
 
 /// Select all elements and returns them in a vector. If the element is not found or another error

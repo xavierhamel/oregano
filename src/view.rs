@@ -61,6 +61,15 @@ pub fn generate_toolbar() {
             ),
         ],
     );
+
+    dom::append_children(
+        &dom::select("#menu__toolbar-fullscreen-result-container"),
+        vec![&dom::form::checkbox::new(
+            &dom::form::checkbox::dual_icon("expand-alt", "compress-alt"),
+            dom::attributes! { "name" => "toolbar__editor", "class" => "form__toggle-input-dual-icon" },
+            true,
+        )],
+    );
 }
 
 pub fn generate_simulation() {
@@ -86,13 +95,27 @@ pub fn generate_simulation() {
         vec![
             &dom::form::label::create("Step"),
             &dom::form::group(vec![
-                dom::form::text_input::create("tran__step", "1"),
-                dom::form::select::create_unit("tran__step-prefix", &unit::Unit::Second, 3),
+                dom::form::text_input::new(dom::attributes! {
+                    "name" => "tran__step",
+                    "data-property-type" => "unit",
+                    "value" => "1"
+                }),
+                dom::form::select::create_unit("tran__step-unit-prefix", &unit::Unit::Second, 3),
+                dom::form::text_input::hidden(
+                    dom::attributes! { "name" => "tran__step-unit", "value" => "s" },
+                ),
             ]),
             &dom::form::label::create("Stop"),
             &dom::form::group(vec![
-                dom::form::text_input::create("tran__stop", "100"),
-                dom::form::select::create_unit("tran__stop-prefix", &unit::Unit::Second, 3),
+                dom::form::text_input::new(dom::attributes! {
+                    "name" => "tran__stop",
+                    "data-property-type" => "unit",
+                    "value" => "100"
+                }),
+                dom::form::select::create_unit("tran__stop-unit-prefix", &unit::Unit::Second, 3),
+                dom::form::text_input::hidden(
+                    dom::attributes! { "name" => "tran__stop-unit", "value" => "s" },
+                ),
             ]),
         ],
     );
@@ -114,13 +137,35 @@ pub fn generate_simulation() {
             &dom::form::text_input::create("sim__freq-np", "10"),
             &dom::form::label::create("Starting Frequency"),
             &dom::form::group(vec![
-                dom::form::text_input::create("sim__freq-fstart", "1"),
-                dom::form::select::create_unit("sim__freq-fstart-prefix", &unit::Unit::Hertz, 3),
+                dom::form::text_input::new(dom::attributes! {
+                    "name" => "sim__freq-fstart",
+                    "data-property-type" => "unit",
+                    "value" => "1"
+                }),
+                dom::form::select::create_unit(
+                    "sim__freq-fstart-unit-prefix",
+                    &unit::Unit::Hertz,
+                    3,
+                ),
+                dom::form::text_input::hidden(
+                    dom::attributes! { "name" => "sim__freq-fstart-unit", "value" => "Hz" },
+                ),
             ]),
             &dom::form::label::create("Final Frequency"),
             &dom::form::group(vec![
-                dom::form::text_input::create("sim__freq-fstop", "10"),
-                dom::form::select::create_unit("sim__freq-fstop-prefix", &unit::Unit::Hertz, 2),
+                dom::form::text_input::new(dom::attributes! {
+                    "name" => "sim__freq-fstop",
+                    "data-property-type" => "unit",
+                    "value" => "10"
+                }),
+                dom::form::select::create_unit(
+                    "sim__freq-fstop-unit-prefix",
+                    &unit::Unit::Hertz,
+                    2,
+                ),
+                dom::form::text_input::hidden(
+                    dom::attributes! { "name" => "sim__freq-fstop-unit", "value" => "Hz" },
+                ),
             ]),
             &dom::form::label::create("Data Type"),
             &dom::form::select::create(

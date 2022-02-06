@@ -1,0 +1,77 @@
+{
+    "name":{
+        "title":"Name",
+        "description":"The name of the component, must be unique."
+    },
+    "value":{
+        "title":"Value"
+    },
+    "init_cond":{
+        "title":"Initial Condition"
+    },
+    "amplitude":{
+        "title":"Amplitude",
+        "description":"The maximum value of the current or voltage."
+    },
+    "offset":{
+        "title":"Offset",
+        "description":"The DC value of the source."
+    },
+    "frequency":{
+        "title":"Frequency"
+    },
+    "delay":{
+        "title":"Delay"
+    },
+    "damping_factor":{
+        "title":"Damping Factor"
+    },
+    "phase":{
+        "title":"Phase"
+    },
+    "diode_is":{
+        "title":"Saturation Current (I_S)",
+        "description":"The saturation current communly denoted as I_S"
+    },
+    "diode_rs":{
+        "title":"Parsitic Resistance (R_S)",
+        "description":"The parsitic resistance (series resistance)"
+    },
+    "diode_n":{
+        "title":"Emission Coefficient (n)",
+        "description":"The emission coefficient or idealty factor"
+    },
+    "diode_tt":{
+        "title":"Transit Time"
+    },
+    "diode_cjo":{
+        "title":"Zero-Bias Junction Capacitance"
+    },
+    "diode_vj":{
+        "title":"Junction Potential"
+    },
+    "diode_m":{
+        "title":"Junction grading coefficient"
+    },
+    "diode_eg":{
+        "title":"Activation energy"
+    },
+    "diode_xti":{
+        "title":"I_S temperature exponent"
+    },
+    "diode_kf":{
+        "title":"Flicker noise coefficient"
+    },
+    "diode_af":{
+        "title":"Flicker noise exponent"
+    },
+    "diode_fc":{
+        "title":"Forward bias depletion capacitance coefficient"
+    },
+    "diode_bv":{
+        "title":"Reverse breakdown voltage"
+    },
+    "diode_ibv":{
+        "title":"Reverse breakdown current"
+    }
+}

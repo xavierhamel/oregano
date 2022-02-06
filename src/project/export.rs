@@ -1,18 +1,17 @@
-use crate::editor::entity::Entity;
+use crate::schema::{parts, wires};
 
-pub fn to_oregano(entities: &Vec<Box<dyn Entity>>) -> String {
-    let mut wires = "".to_string();
-    let mut components = "".to_string();
-    for entity in entities {
-        if entity.is_wire() {
-            wires.push_str(&entity.to_oregano());
-        } else {
-            components.push_str(&entity.to_oregano());
-        }
-    }
-    let output = format!(
-        "[WIRES]\n{}[COMPONENTS]\n{}[ANALYSIS]\n{}",
-        wires, components, "",
-    );
-    output
+pub fn to_oregano(wires: &Vec<wires::Wire>, parts: &Vec<parts::Part>) -> String {
+    let wires_section = wires
+        .iter()
+        .fold(String::from("[WIRES]:::"), |mut acc, wire| {
+            acc.push_str(&format!("{:?}:::", wire));
+            acc
+        });
+    let parts_section = parts
+        .iter()
+        .fold(String::from("[PARTS]:::"), |mut acc, part| {
+            acc.push_str(&format!("{:?}:::", part));
+            acc
+        });
+    format!("{}{}[ANALYSIS]:::{}", wires_section, parts_section, "")
 }

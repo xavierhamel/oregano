@@ -1,5 +1,5 @@
 use crate::intrinsics::*;
-use crate::schema::layout::shape;
+use crate::schema::shape;
 use crate::{dom, error};
 use wasm_bindgen::{JsCast, JsValue};
 

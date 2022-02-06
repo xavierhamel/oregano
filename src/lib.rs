@@ -1,4 +1,6 @@
 extern crate console_error_panic_hook;
+#[macro_use]
+extern crate lazy_static;
 use std::cell::RefCell;
 use std::panic;
 use std::rc::Rc;
@@ -8,16 +10,16 @@ mod dom;
 mod error;
 mod events;
 mod intrinsics;
-//mod plot;
-//mod project;
-//mod simulation;
+mod plot;
+mod project;
+mod resources;
 mod unit;
-mod utils;
 mod view;
 
 mod schema;
 mod sim;
 mod views;
+use crate::schema::properties;
 
 pub const DEBUG: bool = true;
 pub const SCHEMA_CANVAS_ID: &'static str = "#canvas";
@@ -36,38 +38,36 @@ extern "C" {
     fn log(s: &str);
 }
 
+lazy_static! {
+    pub static ref LAYOUTS: resources::Layouts = resources::Layouts::new();
+    pub static ref PARTS: resources::Parts = resources::Parts::new();
+    pub static ref PROPS_DATA: properties::PropertiesData = properties::PropertiesData::new();
+}
+
 #[wasm_bindgen]
 pub fn set_up() {
     // This is for better error message in the console on the web.
     panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-    if !DEBUG {
-        // let canvas_id = "canvas";
-        // view::generate_toolbar();
-        // view::generate_simulation();
-        // let editor = Rc::new(RefCell::new(editor::Editor::new(canvas_id)));
-        // editor.borrow_mut().update();
-        // editor::component::dialogs::load_components_dialog(editor.clone());
-        // // Adding mouse and keyboard event handlers. It's really ugly how it was added but it is what
-        // // it is...
-        // events::add_events(editor.clone(), canvas_id);
+    views::parts::load();
+    view::generate_toolbar();
+    view::generate_simulation();
+    let schema = Rc::new(RefCell::new(schema::Schema::new().unwrap()));
+    let plots = Rc::new(RefCell::new(plot::Plots::new()));
+    schema.borrow_mut().update();
+    events::add_events_schema(schema.clone(), plots.clone());
 
-        // let (x_label, y_labels, series) =
-        //     plot::parser::parse_spice_output(plot::test::TEST_OUTPUT_1);
-        // editor
-        //     .borrow_mut()
-        //     .plots
-        //     .update_data(series, x_label, y_labels);
-        // editor.borrow_mut().plots.add_plot();
-    } else {
-        views::parts::load();
-        view::generate_toolbar();
-        view::generate_simulation();
-        let schema = Rc::new(RefCell::new(schema::Schema::new().unwrap()));
-        schema.borrow_mut().update();
-        //editor::component::dialogs::load_components_dialog(schema.clone());
-        events::add_events_schema(schema.clone());
-    }
+    let probes = sim::Probes::new(
+        vec![sim::Probe {
+            spice: String::from(""),
+            name: String::from("P0"),
+        }],
+        vec![],
+    );
+    let (x_label, y_labels, series) =
+        plot::parser::parse_spice_output(&probes, plot::test::TEST_OUTPUT_1);
+    plots.borrow_mut().update_data(series, x_label, y_labels);
+    plots.borrow_mut().add_plot();
 }
 
 pub trait IntoSpice {

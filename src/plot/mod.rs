@@ -1,8 +1,8 @@
 mod axis;
 pub mod parser;
 pub mod test;
-use crate::dom;
 use crate::intrinsics::*;
+use crate::{clog, dom};
 use wasm_bindgen::{JsCast, JsValue};
 
 const AXIS_WIDTH: f64 = 45.0;
@@ -42,10 +42,15 @@ impl Plots {
             y_axis: axis::Axis::new(5, Vec::new()),
             plot_count: 0,
         };
-        plots.resize_canvas();
+        plots.resize();
         //plots.add_plot();
         plots.update_selector();
         plots
+    }
+
+    pub fn mouse_updated(&mut self, mouse: Option<Point>) {
+        self.mouse = mouse;
+        self.draw();
     }
 
     pub fn add_plot(&mut self) {
@@ -124,16 +129,18 @@ impl Plots {
         self.draw();
     }
 
-    pub fn resize_canvas(&mut self) {
-        let canvas = dom::canvas::as_canvas(dom::select(CANVAS_ID));
-        let container = dom::select("#simulations__canvas-container")
-            .dyn_into::<web_sys::HtmlElement>()
-            .map_err(|_| ())
-            .unwrap();
-        canvas.set_width(container.offset_width() as u32);
-        canvas.set_height(container.offset_height() as u32);
-        self.size = dom::canvas::size(CANVAS_ID) - Size::new(AXIS_WIDTH + 34.0, AXIS_WIDTH + 10.0);
-        self.draw();
+    pub fn resize(&mut self) {
+        if let Ok(canvas) = dom::convert::<web_sys::HtmlCanvasElement>(dom::select(CANVAS_ID)) {
+            let container =
+                dom::convert::<web_sys::HtmlElement>(dom::select("#simulations__canvas-container"));
+            if let Ok(container) = container {
+                canvas.set_height(container.offset_height() as u32);
+                canvas.set_width(container.offset_width() as u32);
+                self.size =
+                    dom::canvas::size(CANVAS_ID) - Size::new(AXIS_WIDTH + 34.0, AXIS_WIDTH + 10.0);
+                self.draw();
+            }
+        }
     }
 
     pub fn update_data(&mut self, series: Vec<Vec<Point>>, x_label: String, y_labels: Vec<String>) {
@@ -178,7 +185,7 @@ impl Plots {
                 ])],
             );
         });
-        self.resize_canvas();
+        self.resize();
     }
 
     pub fn update_visible_series(&mut self) {
@@ -332,7 +339,7 @@ impl Plot2 {
         let mut selected_points = Vec::new();
         for (idx, s) in series.iter().enumerate() {
             if self.visible_series[idx] {
-                if series.len() == 0 {
+                if s.len() == 0 {
                     continue;
                 }
                 context.begin_path();
@@ -341,18 +348,22 @@ impl Plot2 {
                     off.x + (s[0].x - self.min.x) * self.scale.x,
                     off.y + (self.max.y - s[0].y) * self.scale.y,
                 );
-                let mut selected_point = None;
+                let mut closest: Option<(Point, Point)> = None;
                 for point in s.iter() {
                     let x = off.x + (point.x - self.min.x) * self.scale.x;
                     let y = off.y + (self.max.y - point.y) * self.scale.y;
-                    if let Some(mouse_position) = mouse {
-                        if x - 1.0 < mouse_position.x && x + 1.0 > mouse_position.x {
-                            selected_point = Some((Point::new(x, y), point));
+                    if let Some(mouse_pos) = mouse {
+                        if let Some((closest_point, _)) = closest {
+                            if (mouse_pos.x - x).abs() <= (mouse_pos.x - closest_point.x).abs() {
+                                closest = Some((Point::new(x, y), *point));
+                            }
+                        } else {
+                            closest = Some((Point::new(x, y), *point));
                         }
                     }
                     context.line_to(x, y);
                 }
-                selected_points.push(selected_point);
+                selected_points.push(closest);
                 context.stroke();
             }
         }

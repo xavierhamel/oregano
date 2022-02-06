@@ -16,12 +16,12 @@
             </div>
         </div>
         <div class="panels__container">
-            <div class="panel__sidebar" data-toolbar="toolbar__components">
+            <div class="panel__sidebar panel__scrollable" data-toolbar="toolbar__components">
                 <h2>Composantes</h2>
                 <div id="menu__component-list"></div>
             </div>
             <div class="panel__center">
-                <div class="panel__editor" id="menu__editor-container">
+                <div class="panel__editor" id="menu__editor-container" data-toolbar="toolbar__editor">
                     <canvas width="100" height="100" id="canvas"></canvas>
                 </div>
                 <div class="panel__results flex-col" data-toolbar="toolbar__simulation">
@@ -29,6 +29,9 @@
                         <div class="flex-row" id="sim__results-selector">
                         </div>
                         <button class="form__button" id="sim__results-add">Add</button>
+                        <div class="spacer"></div>
+                        <div id="menu__toolbar-fullscreen-result-container">
+                        </div>
                     </div>
                     <div class="flex-row panel__results-container">
                         <div class="flex-col panel__results-settings">
@@ -43,24 +46,32 @@
                     </div>
                 </div>
             </div>
-            <div class="panel__sidebar" data-toolbar="toolbar__properties">
-                <h2>Propriétés</h2>
-                <div id="menu__property-list" class="panel__properties">
-                    <label class="form__label-bold">Aucun composant sélectionné</label>
+            <div class="flex-col" data-toolbar="toolbar__properties">
+                <div class="panel__sidebar panel__scrollable">
+                    <h2>Propriétés</h2>
+                    <div id="menu__properties" class="panel__properties">
+                        <label class="form__label-bold">Aucun composant sélectionné</label>
+                    </div>
+                    
+                    <div id="menu__model-properties">
+                        <h2>Propriétés du modèle</h2>
+                        <div class="panel__model-properties"></div>
+                    </div>
                 </div>
-                <div class="panel__separator"></div>
-                <h2>Simulation</h2>
-                <div id="menu__simulations">
-                    <div id="menu__simulations-type">
+                <div class="panel__sidebar panel__scrollable">
+                    <h2>Simulation</h2>
+                    <div id="menu__simulations">
+                        <div id="menu__simulations-type">
 
-                    </div>
-                    <div id="menu__simulations-type-tran">
+                        </div>
+                        <div id="menu__simulations-type-tran">
 
-                    </div>
-                    <div id="menu__simulations-type-freq" class="hide">
+                        </div>
+                        <div id="menu__simulations-type-freq" class="hide">
 
+                        </div>
+                        <button class="form__button">Simuler</button>
                     </div>
-                    <button class="form__button">Simuler</button>
                 </div>
             </div>
         </div>
@@ -68,13 +79,13 @@
             <div class="error__mask">
                 <div class="error__container">
                     <div class="error__header">
-                        <i class="far fa-frown"></i>
                         <h1>Error</h1>
                     </div>
-                    <div class="error__message">
-                        <p id="error__message"></p>
-                        <button class="error__button" id="error__close">Ok</button>
+                    <div class="error__messages" id="error__messages">
+                        <div class="error__message">Error message</div>
+                        <div class="error__message">Error message</div>
                     </div>
+                    <button class="error__button" id="error__close">Ok</button>
                 </div>
             </div>
         </div>

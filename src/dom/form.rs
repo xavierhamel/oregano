@@ -36,22 +36,22 @@ pub mod button {
 }
 
 pub mod radio {
-    use crate::dom;
+    use crate::{dom, error};
 
-    pub fn create(name: &str, value: &str, icon: &str) -> web_sys::Element {
+    pub fn create(name: &str, value: &str, icon: &str, is_checked: bool) -> web_sys::Element {
+        let mut attributes = dom::attributes! {
+            "type" => "radio",
+            "name" => name,
+            "value" => value,
+        };
+        if is_checked {
+            attributes.insert("checked", "");
+        }
         dom::create_element(
             "label",
             dom::attributes! { "class" => "form__radio" },
             vec![
-                dom::create_element(
-                    "input",
-                    dom::attributes! {
-                        "type" => "radio",
-                        "name" => name,
-                        "value" => value,
-                    },
-                    vec![],
-                ),
+                dom::create_element("input", attributes, vec![]),
                 dom::create_element("span", dom::attributes! {}, vec![dom::inner_html(icon)]),
             ],
         )
@@ -65,8 +65,31 @@ pub mod radio {
         values
             .iter()
             .enumerate()
-            .map(|(idx, value)| create(name, value, icons[idx]))
+            .map(|(idx, value)| create(name, value, icons[idx], idx == 0))
             .collect::<Vec<web_sys::Element>>()
+    }
+
+    pub fn value<T: std::str::FromStr>(elements: Vec<web_sys::Element>) -> Result<T, error::Error> {
+        for element in elements.into_iter() {
+            let input = dom::convert::<web_sys::HtmlInputElement>(element)?;
+            if input.checked() {
+                return super::parse::<T>(&input.value());
+            }
+        }
+        super::parse::<T>("")
+    }
+
+    pub fn set_checked<T: std::fmt::Display>(selector: &str, value: T) -> Result<(), error::Error> {
+        let string_value = value.to_string();
+        for element in dom::select_all(selector).into_iter() {
+            let input = dom::convert::<web_sys::HtmlInputElement>(element)?;
+            if input.value() == string_value {
+                input.set_checked(true);
+            } else {
+                input.set_checked(false);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -87,7 +110,9 @@ pub mod label {
     }
 
     pub fn new<'a>(title: &'a str, mut attributes: HashMap<&str, &'a str>) -> web_sys::Element {
-        attributes.insert("class", "form__label");
+        if !attributes.contains_key("class") {
+            attributes.insert("class", "form__label");
+        }
         attributes.insert("inner_html", title);
         dom::create_element("label", attributes, vec![])
     }
@@ -132,6 +157,7 @@ pub mod text_input {
 pub mod checkbox {
     use crate::dom;
     use crate::error;
+    use std::collections::HashMap;
 
     pub fn create(name: &str, is_checked: bool, icon: &str) -> web_sys::Element {
         let checkbox = dom::create_element(
@@ -158,6 +184,42 @@ pub mod checkbox {
                     vec![],
                 ),
             ],
+        )
+    }
+
+    pub fn new<'a>(
+        icon: &'a str,
+        mut attributes: HashMap<&str, &'a str>,
+        is_checked: bool,
+    ) -> web_sys::Element {
+        attributes.insert("type", "checkbox");
+        if is_checked {
+            attributes.insert("checked", "");
+        }
+        let checkbox = dom::create_element("input", attributes, vec![]);
+        dom::create_element(
+            "label",
+            dom::attributes! { "class" => "form__toggle-input" },
+            vec![
+                checkbox,
+                dom::create_element(
+                    "span",
+                    dom::attributes! {
+                        "inner_html" => icon
+                    },
+                    vec![],
+                ),
+            ],
+        )
+    }
+
+    /// Dual icon is useful when you use an icon when the box is checked and an other one the box
+    /// is unchecked.
+    pub fn dual_icon(checked: &str, unchecked: &str) -> String {
+        format!(
+            "<div class=\"checked\">{}</div><div class=\"unchecked\">{}</div>",
+            dom::icon(checked),
+            dom::icon(unchecked)
         )
     }
 
@@ -237,8 +299,8 @@ pub mod select {
 pub mod tooltip {
     use crate::dom;
 
-    pub fn create(text: &str) -> web_sys::Element {
-        if text.len() > 0 {
+    pub fn create(description: &Option<String>) -> web_sys::Element {
+        if let Some(text) = description {
             dom::create_element(
                 "div",
                 dom::attributes! {

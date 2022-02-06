@@ -1,89 +1,40 @@
-use crate::error;
 use crate::intrinsics::*;
-use crate::schema::{ctx, layout, mouse, parts, properties};
+use crate::schema::{ctx, mouse, parts, properties, utils};
+use crate::{error, PARTS};
+use serde::Deserialize;
 use std::fmt;
 
-#[derive(PartialEq, Clone)]
-pub enum State {
-    Floating,
-    Hovered,
-    Selected,
-    SelectedAndHovered,
-    None,
-}
-
-impl State {
-    pub fn set_selected(&mut self, is_selected: bool) {
-        *self = if is_selected {
-            match self {
-                State::None | State::Selected | State::Floating => State::Selected,
-                State::Hovered | State::SelectedAndHovered => State::SelectedAndHovered,
-            }
-        } else {
-            match self {
-                State::Selected | State::None => State::None,
-                State::SelectedAndHovered | State::Hovered => State::Hovered,
-                State::Floating => State::Floating,
-            }
-        }
-    }
-
-    pub fn set_hovered(&mut self, is_hovered: bool) {
-        *self = if is_hovered {
-            match self {
-                State::Selected | State::SelectedAndHovered => State::SelectedAndHovered,
-                State::None | State::Hovered => State::Hovered,
-                State::Floating => State::Floating,
-            }
-        } else {
-            match self {
-                State::Selected | State::SelectedAndHovered => State::Selected,
-                State::None | State::Hovered => State::None,
-                State::Floating => State::Floating,
-            }
-        }
-    }
-
-    pub fn is_hovered(&self) -> bool {
-        *self == State::Hovered || *self == State::SelectedAndHovered
-    }
-
-    pub fn is_selected(&self) -> bool {
-        *self == State::Selected || *self == State::SelectedAndHovered
-    }
-}
-
-#[derive(PartialEq, Clone)]
-pub enum Colliding {
-    Connector(usize),
-    Shape,
-    None,
-}
-
-#[derive(Clone)]
+#[derive(Clone, Deserialize)]
 pub struct Part {
-    pub typ: parts::Typ,
-    pub layout: layout::PartLayout,
-    pub state: State,
+    pub typ: String,
+    pub name: Option<String>,
+    #[serde(with = "serde_with::rust::display_fromstr")]
+    pub layout: parts::Layout,
+    pub state: utils::State,
+    #[serde(default = "Point::default")]
     selected_offset: Point,
     pub properties: properties::Properties,
-    colliding: Colliding,
+    colliding: utils::Colliding,
+    pub spice: parts::Spice,
 }
 
 impl Part {
     pub fn new(
-        typ: parts::Typ,
-        layout: layout::PartLayout,
+        typ: String,
+        layout: parts::Layout,
         properties: properties::Properties,
+        spice: parts::Spice,
     ) -> Self {
         let selected_offset = Point::new(layout.size.w / 2.0, layout.size.h / 2.0);
         Self {
             typ,
+            name: None,
             layout,
-            state: State::None,
+            state: utils::State::None,
             selected_offset,
             properties,
-            colliding: Colliding::None,
+            colliding: utils::Colliding::None,
+            spice,
         }
     }
 
@@ -104,28 +55,32 @@ impl Part {
             self.layout.draw_bounding(ctx);
             ctx.set_line_dash_const(vec![]);
         }
-        if self.state != State::None {
+        if self.state != utils::State::None {
             self.layout.draw_connectors(&self.state, ctx);
         }
     }
 
-    pub fn collide_with_point(&mut self, point: Point) -> &Colliding {
+    pub fn collide_with_point(&mut self, point: Point) -> &utils::Colliding {
         self.colliding = self.layout.collide_with_point(point);
         &self.colliding
     }
 
-    pub fn mouse_updated(&mut self, mouse: &mouse::Mouse) {
-        let is_hovered = self.collide_with_point(mouse.scene_pos) == &Colliding::Shape;
+    pub fn mouse_updated(&mut self, mouse: &mut mouse::Mouse) {
+        self.collide_with_point(mouse.scene_pos);
+        let is_hovered = self.colliding == utils::Colliding::Shape;
         self.state.set_hovered(is_hovered);
         if mouse.state == mouse::State::Down {
-            self.state = State::None;
+            if self.state == utils::State::Floating {
+                self.layout.snap_to_grid();
+            }
+            self.state = utils::State::None;
             self.state.set_selected(is_hovered);
             if is_hovered {
                 self.selected_offset = mouse.scene_pos - self.layout.origin;
             }
         }
         if (mouse.action == mouse::Action::MoveEntity && self.state.is_selected())
-            || self.state == State::Floating
+            || self.state == utils::State::Floating
         {
             self.layout.origin = mouse.scene_pos - self.selected_offset;
         } else if mouse.action == mouse::Action::ReleaseEntity {
@@ -139,32 +94,27 @@ impl Part {
             .iter()
             .map(|conn| match &conn.connected_to {
                 Some(name) => Ok(name.clone()),
-                _ => Err(Box::new(error::Sim::MissingConnection(0, 0))),
+                _ => Err(Box::new(error::Sim::MissingConnectionPart(0))),
             })
             .collect::<Result<Vec<String>, Box<error::Sim>>>()
     }
-}
 
-impl From<parts::Typ> for Part {
-    fn from(typ: parts::Typ) -> Self {
-        match typ {
-            parts::Typ::Voltmeter => parts::probe::voltmeter("P0".to_string()),
-            parts::Typ::SourceVoltageAc => parts::source::voltage_ac("Vac".to_string()),
-            parts::Typ::SourceVoltageDc => parts::source::voltage_dc("Vdc".to_string()),
-            parts::Typ::SourceCurrentAc => parts::source::current_ac("Iac".to_string()),
-            parts::Typ::SourceCurrentDc => parts::source::current_dc("Idc".to_string()),
-            parts::Typ::Resistor => parts::lumped::resistor("R0".to_string()),
-            parts::Typ::Capacitor => parts::lumped::capacitor("C0".to_string()),
-            parts::Typ::Inductor => parts::lumped::inductor("L0".to_string()),
-            parts::Typ::Ground => parts::lumped::ground("0".to_string()),
-            parts::Typ::Node => parts::lumped::node("n0".to_string()),
-        }
+    pub fn to_spice(&self) -> Result<String, error::Error> {
+        self.spice.to_spice(&self.properties, self.connectors()?)
     }
 }
 
-// impl std::str::FromStr for Part {
-//     fn from_str(s: &str)
-// }
+impl std::str::FromStr for Part {
+    type Err = error::Error;
+    fn from_str(s: &str) -> Result<Part, error::Error> {
+        let data = s.split(",").collect::<Vec<&str>>();
+        let mut part = PARTS.get(data[0])?;
+        part.layout.update_from_str(data[1])?;
+        let properties = data[2].parse::<properties::Properties>()?;
+        part.properties = properties;
+        Ok(part)
+    }
+}
 
 impl fmt::Display for Part {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

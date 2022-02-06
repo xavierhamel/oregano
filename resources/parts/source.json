@@ -1,0 +1,135 @@
+{
+    "title":"Source",
+    "parts": {
+        "voltage_dc":{
+            "typ":"source.voltage_dc",
+            "name":"Voltage DC",
+            "layout":"source.voltage_dc",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "value":"string[Vdc]",
+                        "is_visible": true
+                    },
+                    "value":{
+                        "order":1,
+                        "value":"unit[10|V|]",
+                        "is_visible": true
+                    }
+                }
+            },
+            "spice":"V{prop:name} {conn:0} {conn:1} dc {prop:value}"
+        },
+        "current_dc":{
+            "typ":"source.current_dc",
+            "name":"Curent DC",
+            "layout":"source.current_dc",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "value":"string[Idc]",
+                        "is_visible": true
+                    },
+                    "value":{
+                        "order":1,
+                        "value":"unit[10|A|]",
+                        "is_visible": true
+                    }
+                }
+            },
+            "spice":"I{prop:name} {conn:0} {conn:1} dc {prop:value}"
+        },
+        "current_ac":{
+            "typ":"source.current_ac",
+            "name":"Curent AC",
+            "layout":"source.current_ac",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "value":"string[Iac]",
+                        "is_visible": true
+                    },
+                    "offset":{
+                        "order":1,
+                        "value":"unit[0|A|]",
+                        "is_visible": true
+                    },
+                    "amplitude":{
+                        "order":2,
+                        "value":"unit[10|A|]",
+                        "is_visible": true
+                    },
+                    "frequency":{
+                        "order":3,
+                        "value":"unit[1|Hz|]",
+                        "is_visible": true
+                    },
+                    "delay":{
+                        "order":4,
+                        "value":"unit[0|s|]",
+                        "is_visible": true
+                    },
+                    "damping_factor":{
+                        "order":5,
+                        "value":"unit[0|Hz|]",
+                        "is_visible": true
+                    },
+                    "phase":{
+                        "order":6,
+                        "value":"unit[0|deg|]",
+                        "is_visible": true
+                    }
+                }
+            },
+            "spice":"I{prop:name} {conn:0} {conn:1} ac 1 SIN({prop:offset} {prop:amplitude} {prop:frequency} {prop:delay} {prop:damping_factor} {prop:phase})"
+        },
+        "voltage_ac":{
+            "typ":"source.voltage_ac",
+            "name":"Voltage AC",
+            "layout":"source.voltage_ac",
+            "properties":{
+                "properties": {
+                    "name": {
+                        "order":0,
+                        "value":"string[Vac]",
+                        "is_visible": true
+                    },
+                    "offset":{
+                        "order":1,
+                        "value":"unit[0|V|]",
+                        "is_visible": true
+                    },
+                    "amplitude":{
+                        "order":2,
+                        "value":"unit[10|V|]",
+                        "is_visible": true
+                    },
+                    "frequency":{
+                        "order":3,
+                        "value":"unit[1|Hz|]",
+                        "is_visible": true
+                    },
+                    "delay":{
+                        "order":4,
+                        "value":"unit[0|s|]",
+                        "is_visible": true
+                    },
+                    "damping_factor":{
+                        "order":5,
+                        "value":"unit[0|Hz|]",
+                        "is_visible": true
+                    },
+                    "phase":{
+                        "order":6,
+                        "value":"unit[0|deg|]",
+                        "is_visible": true
+                    }
+                }
+            },
+            "spice":"V{prop:name} {conn:0} {conn:1} ac 1 SIN({prop:offset} {prop:amplitude} {prop:frequency} {prop:delay} {prop:damping_factor} {prop:phase})"
+        }
+    }
+}
