@@ -1,4 +1,4 @@
-import * as wasm from "../../pkg/spicyrs";
+import * as wasm from "../../pkg/spicyrs.js";
 
 const main = () => {
     wasm.set_up();
