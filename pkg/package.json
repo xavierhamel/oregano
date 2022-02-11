@@ -1,0 +1,16 @@
+{
+  "name": "spicyrs",
+  "collaborators": [
+    "Xavier Hamel <xavier.hamel.4@ulaval.ca>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "spicyrs_bg.wasm",
+    "spicyrs.js",
+    "spicyrs_bg.js",
+    "spicyrs.d.ts"
+  ],
+  "module": "spicyrs.js",
+  "types": "spicyrs.d.ts",
+  "sideEffects": false
+}
