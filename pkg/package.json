@@ -7,7 +7,6 @@
   "files": [
     "spicyrs_bg.wasm",
     "spicyrs.js",
-    "spicyrs_bg.js",
     "spicyrs.d.ts"
   ],
   "module": "spicyrs.js",
