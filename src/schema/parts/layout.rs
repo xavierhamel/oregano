@@ -79,6 +79,10 @@ impl Layout {
         self.orientation.rotate_clockwise();
     }
 
+    pub fn translate(&mut self, offset: Point) {
+        self.origin = self.origin + offset;
+    }
+
     /// The center of the shape (based on it's size)
     pub fn center(&self) -> Point {
         Point::new(self.size.w / 2.0, self.size.h / 2.0) + self.origin

@@ -65,7 +65,7 @@ impl Part {
         &self.colliding
     }
 
-    pub fn mouse_updated(&mut self, mouse: &mut mouse::Mouse) {
+    pub fn mouse_updated(&mut self, mouse: &mut mouse::Mouse, keep_selected: bool) {
         self.collide_with_point(mouse.scene_pos);
         let is_hovered = self.colliding == utils::Colliding::Shape;
         self.state.set_hovered(is_hovered);
@@ -73,9 +73,12 @@ impl Part {
             if self.state == utils::State::Floating {
                 self.layout.snap_to_grid();
             }
-            self.state = utils::State::None;
-            self.state.set_selected(is_hovered);
-            if is_hovered {
+            if ((mouse.ctrl_key && !self.state.is_selected()) || !mouse.ctrl_key) && !keep_selected
+            {
+                self.state = utils::State::None;
+                self.state.set_selected(is_hovered);
+            }
+            if is_hovered || (keep_selected && mouse.action != mouse::Action::MoveEntity) {
                 self.selected_offset = mouse.scene_pos - self.layout.origin;
             }
         }

@@ -129,13 +129,13 @@
                     }
                 }
             },
-            "spice":"D{prop:name} {conn:0} {conn:1} {conn:2} transistor-pnp"
+            "spice":"Q{prop:name} {conn:0} {conn:1} {conn:2} transistor-pnp"
         }
     },
     "models":[
         "diode-1N4148 d(IS=35p RS=64m N=1.24 TT=5n CJO=4p M=0.285 VJ=0.6 BV=75)",
         "diode-ideal d(Ron=1 Roff=1Meg Vfwd=1 Vrev=2)",
 
-        "transistor-pnp PNP"
+        "transistor-pnp NPN"
     ]
 }

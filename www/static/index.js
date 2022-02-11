@@ -4,7 +4,7 @@ const main = () => {
     wasm.set_up();
 
     window.addEventListener('ngspice_call', (event) => {
-        fetch('http://localhost:3000/api/run', {
+        fetch('http://134.122.41.6:80/ngspice', {
             method: 'POST',
             mode: 'cors',
             body: event.detail,

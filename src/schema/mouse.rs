@@ -60,6 +60,7 @@ pub struct Mouse {
     pub prev_screen_pos: Point,
     pub state: State,
     pub action: Action,
+    pub ctrl_key: bool,
 }
 
 impl Mouse {
@@ -70,38 +71,38 @@ impl Mouse {
             scene_pos: Point::new(0.0, 0.0),
             state: State::None,
             action: Action::None,
+            ctrl_key: false,
         }
     }
 
-    pub fn update(&mut self, mouse: Point, scene: &scene::Scene, event: events::Event) {
+    pub fn update(&mut self, event: web_sys::MouseEvent, scene: &scene::Scene) {
+        self.ctrl_key = event.ctrl_key();
+        let typ = event.type_().parse::<events::Event>();
+        let mouse = Point::from(event);
         self.prev_screen_pos = self.screen_pos;
         self.screen_pos = mouse;
         self.scene_pos.update(
             mouse.x / scene.scale + scene.offset.x,
             mouse.y / scene.scale + scene.offset.y,
         );
-        match event {
-            events::Event::MouseMove => self.mousemove(),
-            events::Event::MouseUp => self.mouseup(),
-            events::Event::MouseDown => self.mousedown(),
+        match typ {
+            Ok(events::Event::MouseMove) => self.mousemove(),
+            Ok(events::Event::MouseUp) => self.mouseup(),
+            Ok(events::Event::MouseDown) => self.mousedown(),
             _ => {}
         };
     }
 
     pub fn update_action(&mut self, parts: &parts::Parts, wires: &wires::Wires) {
         let selected_count = parts.selected.len() + wires.selected.len();
-        match self.state {
-            State::Down | State::Drag => {
-                self.action.set_protected(if selected_count > 0 {
-                    Action::MoveEntity
-                } else {
-                    Action::MoveView
-                });
-            }
-            State::Click => {
-                self.state = State::Up;
-            }
-            _ => {}
+        if self.state == State::Down && !self.ctrl_key || self.state == State::Drag {
+            self.action.set_protected(if selected_count > 0 {
+                Action::MoveEntity
+            } else {
+                Action::MoveView
+            });
+        } else if self.state == State::Click {
+            self.state = State::Up;
         }
     }
 

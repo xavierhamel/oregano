@@ -11,6 +11,7 @@ pub struct Parts {
     pub parts: Vec<Part>,
     pub hovered: Vec<usize>,
     pub selected: Vec<usize>,
+    copied: Vec<usize>,
 }
 
 impl Parts {
@@ -20,6 +21,7 @@ impl Parts {
             parts: Vec::new(),
             selected: Vec::new(),
             hovered: Vec::new(),
+            copied: Vec::new(),
         }
     }
 
@@ -31,13 +33,13 @@ impl Parts {
         self.parts.push(part);
     }
 
-    pub fn update(&mut self, mouse: &mut mouse::Mouse) {
+    pub fn update(&mut self, mouse: &mut mouse::Mouse, keep_selected: bool) {
         let mut selected = Vec::new();
         let mut hovered = Vec::new();
         self.update_selected();
         if mouse.action != mouse::Action::DrawWire {
             self.parts.iter_mut().enumerate().for_each(|(idx, part)| {
-                part.mouse_updated(mouse);
+                part.mouse_updated(mouse, keep_selected);
                 if part.state.is_selected() {
                     selected.push(idx);
                 }
@@ -54,6 +56,15 @@ impl Parts {
         if self.selected.len() != 1 {
             views::properties::empty();
         }
+    }
+
+    pub fn do_keep_selected(&mut self, mouse: &mouse::Mouse) -> bool {
+        for &idx in self.selected.iter() {
+            if self.parts[idx].collide_with_point(mouse.scene_pos) == &utils::Colliding::Shape {
+                return true;
+            }
+        }
+        return false;
     }
 
     pub fn update_selected(&mut self) {
@@ -86,6 +97,22 @@ impl Parts {
             .map(|(_, part)| part.clone())
             .collect::<Vec<Part>>();
         self.selected = Vec::new();
+    }
+
+    pub fn copy(&mut self) {
+        self.copied = self.selected.clone();
+    }
+
+    pub fn paste(&mut self) {
+        let mut selected = Vec::new();
+        for idx in &self.copied {
+            selected.push(self.parts.len());
+            let mut part = self.parts[*idx].clone();
+            part.layout.translate(Point::new(10.0, 10.0));
+            self.parts.push(part);
+            self.parts[*idx].state = utils::State::None;
+        }
+        self.selected = selected;
     }
 
     pub fn rotate(&mut self) {

@@ -8,6 +8,7 @@ pub use wire::*;
 pub struct Wires {
     pub wires: Vec<Wire>,
     pub selected: Vec<usize>,
+    copied: Vec<usize>,
 }
 
 impl Wires {
@@ -16,6 +17,7 @@ impl Wires {
         Self {
             wires,
             selected: Vec::new(),
+            copied: Vec::new(),
         }
     }
 
@@ -23,7 +25,7 @@ impl Wires {
         self.wires.push(Wire::add(mouse.scene_pos.snap_to_grid()));
     }
 
-    pub fn update(&mut self, mouse: &mut mouse::Mouse, parts: &parts::Parts) {
+    pub fn update(&mut self, mouse: &mut mouse::Mouse, parts: &parts::Parts, keep_selected: bool) {
         if mouse.action == mouse::Action::DrawWire {
             if let Some(idx) = self.floating_wire() {
                 let point = self.wires[idx].layout.shape.points.last().unwrap();
@@ -39,14 +41,14 @@ impl Wires {
                 self.add(mouse);
             }
         } else {
-            self.select(mouse);
+            self.select(mouse, keep_selected);
         }
     }
 
-    pub fn select(&mut self, mouse: &mut mouse::Mouse) {
+    pub fn select(&mut self, mouse: &mut mouse::Mouse, keep_selected: bool) {
         let mut selected = Vec::new();
         self.wires.iter_mut().enumerate().for_each(|(idx, wire)| {
-            wire.mouse_updated(mouse);
+            wire.mouse_updated(mouse, keep_selected);
             if wire.state.is_selected() {
                 selected.push(idx);
             }
@@ -94,6 +96,31 @@ impl Wires {
             .map(|(_, wire)| wire.clone())
             .collect::<Vec<Wire>>();
         self.selected = Vec::new();
+    }
+
+    pub fn copy(&mut self) {
+        self.copied = self.selected.clone();
+    }
+
+    pub fn paste(&mut self) {
+        let mut selected = Vec::new();
+        for idx in &self.copied {
+            selected.push(self.wires.len());
+            let mut wire = self.wires[*idx].clone();
+            wire.layout.shape.translate(Point::new(10.0, 10.0));
+            self.wires.push(wire);
+            self.wires[*idx].state = utils::State::None;
+        }
+        self.selected = selected;
+    }
+
+    pub fn do_keep_selected(&mut self, mouse: &mouse::Mouse) -> bool {
+        for &idx in self.selected.iter() {
+            if self.wires[idx].collide_with_point(mouse.scene_pos) == &utils::Colliding::Shape {
+                return true;
+            }
+        }
+        return false;
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, Wire> {

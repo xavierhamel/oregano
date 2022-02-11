@@ -62,7 +62,7 @@ impl Wire {
         &self.colliding
     }
 
-    pub fn mouse_updated(&mut self, mouse: &mut mouse::Mouse) {
+    pub fn mouse_updated(&mut self, mouse: &mut mouse::Mouse, keep_selected: bool) {
         if let Some(corner) = self.selected_corner {
             if mouse.state == mouse::State::Up {
                 self.selected_corner = None;
@@ -79,9 +79,12 @@ impl Wire {
             if self.state.is_selected() {
                 self.try_select_corner(mouse);
             }
-            self.state = utils::State::None;
-            self.state.set_selected(is_hovered);
-            if is_hovered {
+            if ((mouse.ctrl_key && !self.state.is_selected()) || !mouse.ctrl_key) && !keep_selected
+            {
+                self.state = utils::State::None;
+                self.state.set_selected(is_hovered);
+            }
+            if is_hovered || (keep_selected && mouse.action != mouse::Action::MoveEntity) {
                 self.selected_offset = mouse.scene_pos;
             }
         }

@@ -105,16 +105,13 @@ impl EventListener {
 
 pub fn add_events_schema(schema: Rc<RefCell<schema::Schema>>, plots: Rc<RefCell<plot::Plots>>) {
     let canvas = dom::select(crate::SCHEMA_CANVAS_ID);
-    //let canvas = dom::canvas::as_canvas(dom::select(crate::SCHEMA_CANVAS_ID));
+
     let s = schema.clone();
     EventListener::add_multiple::<web_sys::MouseEvent>(
         &canvas,
         vec![Event::MouseMove, Event::MouseUp, Event::MouseDown],
         Box::new(move |event: web_sys::MouseEvent| {
-            if let Ok(event_type) = event.type_().parse::<Event>() {
-                s.borrow_mut()
-                    .mouse_dispatch(Point::from(event), event_type);
-            }
+            s.borrow_mut().mouse_dispatch(event);
         }),
     );
 
@@ -132,7 +129,7 @@ pub fn add_events_schema(schema: Rc<RefCell<schema::Schema>>, plots: Rc<RefCell<
         &dom::document(),
         &Event::KeyDown,
         Box::new(move |event: web_sys::KeyboardEvent| {
-            s.borrow_mut().keyboard_dispatch(&event.key());
+            s.borrow_mut().keyboard_dispatch(&event);
         }),
     );
 

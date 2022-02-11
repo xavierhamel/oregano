@@ -37,8 +37,8 @@ impl Schema {
         })
     }
 
-    pub fn mouse_dispatch(&mut self, mouse: Point, event: events::Event) {
-        self.mouse.update(mouse, &self.scene, event);
+    pub fn mouse_dispatch(&mut self, event: web_sys::MouseEvent) {
+        self.mouse.update(event, &self.scene);
         self.update();
         self.scene.compute_offset(&self.mouse);
     }
@@ -48,8 +48,8 @@ impl Schema {
         self.update();
     }
 
-    pub fn keyboard_dispatch(&mut self, key: &str) {
-        match key {
+    pub fn keyboard_dispatch(&mut self, event: &web_sys::KeyboardEvent) {
+        match &event.key()[..] {
             "w" => self.add_wire(),
             "r" => self.parts.rotate(),
             "Escape" => self.unselect(),
@@ -57,6 +57,8 @@ impl Schema {
             "s" => self.to_spice(),
             "e" => self.export(),
             "i" => self.import(),
+            "c" if event.ctrl_key() => self.copy(),
+            "v" if event.ctrl_key() => self.paste(),
             _ => {}
         }
         self.update();
@@ -108,6 +110,16 @@ impl Schema {
         }
     }
 
+    fn copy(&mut self) {
+        self.wires.copy();
+        self.parts.copy();
+    }
+
+    fn paste(&mut self) {
+        self.wires.paste();
+        self.parts.paste();
+    }
+
     pub fn add_wire(&mut self) {
         self.wires.unselect(&mut self.mouse);
         self.parts.unselect();
@@ -136,11 +148,17 @@ impl Schema {
     }
 
     pub fn update(&mut self) {
-        self.parts.update(&mut self.mouse);
-        self.wires.update(&mut self.mouse, &self.parts);
+        let keep_selected = self.do_keep_selected();
+        self.parts.update(&mut self.mouse, keep_selected);
+        self.wires
+            .update(&mut self.mouse, &self.parts, keep_selected);
         // c'est ici qu'on devrait changer l'action si jamais on a un element select.
         self.mouse.update_action(&self.parts, &self.wires);
         self.draw();
+    }
+
+    fn do_keep_selected(&mut self) -> bool {
+        self.parts.do_keep_selected(&self.mouse) || self.wires.do_keep_selected(&self.mouse)
     }
 
     pub fn draw(&mut self) {

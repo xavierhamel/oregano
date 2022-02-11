@@ -44,7 +44,7 @@ impl<'entity> Verifier<'entity> {
     fn check_for_name_collision(&mut self, part: &parts::Part) {
         if let Ok(property) = part.properties.get("name") {
             let name = property.value.to_string();
-            if self.names.contains(&name) {
+            if self.names.contains(&name) && name != "0" {
                 self.errors
                     .push(Box::new(error::Sim::MultipleSameName(name.clone())));
             } else {
