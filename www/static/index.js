@@ -1,7 +1,8 @@
-import * as wasm from "../../pkg/spicyrs.js";
+import init, { set_up } from "../../pkg/spicyrs.js";
 
-const main = () => {
-    wasm.set_up();
+const main = async () => {
+    await init();
+    set_up();
 
     window.addEventListener('ngspice_call', (event) => {
         fetch('http://134.122.41.6:80/ngspice', {
